@@ -1,0 +1,114 @@
+C251 COMPILER V5.60.0,  main                                                               24/02/23  15:19:17  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE main
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\keil\C251\BIN\C251.EXE voltage_current_check\main.c XSMALL BROWSE INCDIR(.\ADC;.\I2C;.\LCD;.\Sys
+                    -tem;.\UART1;.\Menu;.\KEY;..\实战-电流计_V2.0;.\Timer;.\SPI_Handler;.\CH224K;.\Pwm) DEBUG PRINT(.\Listings\main.lst) TABS
+                    -(2) OBJECT(.\Objects\main.obj) 
+
+stmt  level    source
+
+    1          #include <STC32G.H>
+    2          #include "ADC.h"
+    3          #include "UART1.h"
+    4          #include "I2C.h"
+    5          #include "AHT10.h"
+    6          #include "lcd_init.h"
+    7          #include "lcd.h"
+    8          #include "Key.h"
+    9          #include "Timer.h"
+   10          #include "menu.h"
+   11          #include "menu_Ui.h"
+   12          #include "String.h"
+   13          #include "CH224K.h"
+   14          #include "Pwm.h"
+   15          /*------------------------------USB夔牛功率计-------------------------------
+   16          作者：小夏
+   17          功能：电流电压功率检测
+   18                PD，QC诱骗
+   19                电压电流曲线显示
+   20                过温，过载保护
+   21                板上温度湿度检测
+   22          时间：2023/11/5-2023/2/21
+   23          版本：1.1
+   24          */
+   25          /*------------------------------更新-------------------------------
+   26          作者：小夏
+   27          功能：添加Ah和Wh计算(去除电阻和电池组功能)
+   28          时间：2023/2/22
+   29          版本：1.1.1
+   30          */
+   31          /*------------------------------更新-------------------------------
+   32          作者：小夏
+   33          功能：添加C口PD快充检测时关闭NMOS管关闭后端的USBA口
+   34                取消过载过温时自动恢复，添加back按键取消过载和过温
+   35          时间：2023/2/23
+   36          版本：1.1.2
+   37          */
+   38          int main(void){
+   39   1      
+   40   1        GPIO_Init();
+   41   1        P16 =0;
+   42   1        Uart1_Init();
+   43   1      
+   44   1        LCD_Init();//LCD初始化
+   45   1        #if 1
+   46   1        C_T_P.protect_Temp=60;
+   47   1        C_T_P.protect_Current=4;
+   48   1        ADC_Init();
+   49   1          
+   50   1        AHT10_State();
+   51   1        Timer0_Init();
+   52   1        Timer1_Init();
+   53   1        Timer2_Init();
+   54   1        
+   55   1        PD_Bgegin(); //PD检测
+   56   1        PD_Power_Output();//PD功率检测
+   57   1        CH224K_PD_Voltage(OUTPUT_5V); //PD输出5V
+C251 COMPILER V5.60.0,  main                                                               24/02/23  15:19:17  PAGE 2   
+
+   58   1        P16 =1;
+   59   1        Delay_ms(100);
+   60   1        LCD_Fill(0,0,240,135,WHITE);
+   61   1        
+   62   1        Progress_bar_Write(30, 55, 210, 75,GREEN,GRAY,BLACK,WHITE,10,100,DISABEL);//进度条显示
+   63   1        LCD_Fill(0,0,240,135,BLACK);
+   64   1        menu_Ui_main_Rect_set_steup();
+   65   1        Range.C_Max=ADC_Read_current_Value_average()*1.794;
+   66   1        Range.V_Max=ADC_Voltage_Read_Value_average();
+   67   1        Range.W_Max=Range.C_Max*Range.V_Max;
+   68   1        Range.C_Min=Range.C_Max; Range.V_Min=Range.V_Max;Range.W_Min=Range.W_Max;
+   69   1      
+   70   1        #endif
+   71   1        
+   72   1        while(1){
+   73   2      
+   74   2          Key_EVENT();
+   75   2      
+   76   2        }
+   77   1      }
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       238     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =    ------     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =    ------     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

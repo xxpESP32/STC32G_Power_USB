@@ -1,0 +1,1 @@
+"Timer\Timer.c" XSMALL BROWSE INCDIR(.\ADC;.\I2C;.\LCD;.\System;.\UART1;.\Menu;.\KEY;..\实战-电流计_V2.0;.\Timer;.\SPI_Handler;.\CH224K;.\Pwm) DEBUG PRINT(.\Listings\Timer.lst) TABS (2) OBJECT(.\Objects\Timer.obj)

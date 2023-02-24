@@ -1,0 +1,436 @@
+C251 COMPILER V5.60.0,  lcd_init                                                           22/02/23  20:33:57  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE lcd_init
+OBJECT MODULE PLACED IN .\Objects\lcd_init.obj
+COMPILER INVOKED BY: D:\keil\C251\BIN\C251.EXE LCD\lcd_init.c XSMALL BROWSE INCDIR(.\ADC;.\I2C;.\LCD;.\System;.\UART1;.\
+                    -Menu;.\KEY;..\实战-电流计_V2.0;.\Timer;.\SPI_Handler;.\CH224K;.\Pwm) DEBUG PRINT(.\Listings\lcd_init.lst) TABS(2) OBJECT
+                    -(.\Objects\lcd_init.obj) 
+
+stmt  level    source
+
+    1          #include "lcd_init.h"
+    2          #include "system.h"
+    3          #include "SPI_Handler.h"
+    4          
+    5          #define SYS_CLK 35000000L
+    6          //不准确延时函数
+    7          
+    8          
+    9          
+   10          /******************************************************************************
+   11                函数说明：LCD串行数据写入函数
+   12                入口数据：dat  要写入的串行数据
+   13                返回值：  无
+   14          ******************************************************************************/
+   15          #if SOFTWARE
+   16          
+   17          void LCD_Writ_Bus(u8 dat) 
+   18          { 
+   19   1        u8 i;
+   20   1        LCD_CS_Clr();
+   21   1        for(i=0;i<8;i++)
+   22   1        {       
+   23   2          LCD_SCLK_Clr();
+   24   2          if(dat&0x80)
+   25   2          {
+   26   3             LCD_MOSI_Set();
+   27   3          }
+   28   2          else
+   29   2          {
+   30   3             LCD_MOSI_Clr();
+   31   3          }
+   32   2          LCD_SCLK_Set();
+   33   2          dat<<=1;
+   34   2        } 
+   35   1        LCD_CS_Set(); 
+   36   1      }
+   37          #else
+               void LCD_Writ_Bus(u8 dat){
+                 LCD_CS_Clr();
+                 SPDAT=dat;
+                 while(!SPIF);
+                 SPIF=1;
+                 LCD_CS_Set(); 
+               }
+               #endif
+   46          /******************************************************************************
+   47                函数说明：LCD写入数据
+   48                入口数据：dat 写入的数据
+   49                返回值：  无
+   50          ******************************************************************************/
+   51          void LCD_WR_DATA8(u8 dat)
+   52          {
+   53   1        LCD_Writ_Bus(dat);
+   54   1      }
+   55          
+   56          
+   57          /******************************************************************************
+C251 COMPILER V5.60.0,  lcd_init                                                           22/02/23  20:33:57  PAGE 2   
+
+   58                函数说明：LCD写入数据
+   59                入口数据：dat 写入的数据
+   60                返回值：  无
+   61          ******************************************************************************/
+   62          void LCD_WR_DATA(u16 dat)
+   63          {
+   64   1        LCD_Writ_Bus(dat>>8);
+*** WARNING C188 IN LINE 64 OF LCD\lcd_init.c: 'parameter 1': value truncated
+   65   1        LCD_Writ_Bus(dat);
+*** WARNING C188 IN LINE 65 OF LCD\lcd_init.c: 'parameter 1': value truncated
+   66   1      }
+   67          
+   68          
+   69          /******************************************************************************
+   70                函数说明：LCD写入命令
+   71                入口数据：dat 写入的命令
+   72                返回值：  无
+   73          ******************************************************************************/
+   74          void LCD_WR_REG(u8 dat)
+   75          {
+   76   1        LCD_DC_Clr();//写命令
+   77   1        LCD_Writ_Bus(dat);
+   78   1        LCD_DC_Set();//写数据
+   79   1      }
+   80          
+   81          
+   82          /******************************************************************************
+   83                函数说明：设置起始和结束地址
+   84                入口数据：x1,x2 设置列的起始和结束地址
+   85                          y1,y2 设置行的起始和结束地址
+   86                返回值：  无
+   87          ******************************************************************************/
+   88          
+   89          void LCD_Address_Set(u16 x1,u16 y1,u16 x2,u16 y2)
+   90          {
+   91   1            if(USE_HORIZONTAL==0)
+   92   1        {
+   93   2          LCD_WR_REG(0x2a);//列地址设置
+   94   2          LCD_WR_DATA(x1+52);
+   95   2          LCD_WR_DATA(x2+52);
+   96   2          LCD_WR_REG(0x2b);//行地址设置
+   97   2          LCD_WR_DATA(y1+40);
+   98   2          LCD_WR_DATA(y2+40);
+   99   2          LCD_WR_REG(0x2c);//储存器写
+  100   2        }
+  101   1        else if(USE_HORIZONTAL==1)
+  102   1        {
+  103   2          LCD_WR_REG(0x2a);//列地址设置
+  104   2          LCD_WR_DATA(x1+53);
+  105   2          LCD_WR_DATA(x2+53);
+  106   2          LCD_WR_REG(0x2b);//行地址设置
+  107   2          LCD_WR_DATA(y1+40);
+  108   2          LCD_WR_DATA(y2+40);
+  109   2          LCD_WR_REG(0x2c);//储存器写
+  110   2        }
+  111   1        else if(USE_HORIZONTAL==2)
+  112   1        {
+  113   2          LCD_WR_REG(0x2a);//列地址设置
+  114   2          LCD_WR_DATA(x1+40);
+  115   2          LCD_WR_DATA(x2+40);
+  116   2          LCD_WR_REG(0x2b);//行地址设置
+  117   2          LCD_WR_DATA(y1+53);
+  118   2          LCD_WR_DATA(y2+53);
+  119   2          LCD_WR_REG(0x2c);//储存器写
+  120   2        }
+  121   1        else
+C251 COMPILER V5.60.0,  lcd_init                                                           22/02/23  20:33:57  PAGE 3   
+
+  122   1        {
+  123   2          LCD_WR_REG(0x2a);//列地址设置
+  124   2          LCD_WR_DATA(x1+40);
+  125   2          LCD_WR_DATA(x2+40);
+  126   2          LCD_WR_REG(0x2b);//行地址设置
+  127   2          LCD_WR_DATA(y1+52);
+  128   2          LCD_WR_DATA(y2+52);
+  129   2          LCD_WR_REG(0x2c);//储存器写
+  130   2        }
+  131   1      }
+  132          /*
+  133          void LCD_Address_Set(u16 x1,u16 y1,u16 x2,u16 y2)
+  134          {
+  135            if(USE_HORIZONTAL==0)
+  136            {
+  137              LCD_WR_REG(0x2a);//列地址设置
+  138              LCD_WR_DATA(x1+26);
+  139              LCD_WR_DATA(x2+26);
+  140              LCD_WR_REG(0x2b);//行地址设置
+  141              LCD_WR_DATA(y1+1);
+  142              LCD_WR_DATA(y2+1);
+  143              LCD_WR_REG(0x2c);//储存器写
+  144            }
+  145            else if(USE_HORIZONTAL==1)
+  146            {
+  147              LCD_WR_REG(0x2a);//列地址设置
+  148              LCD_WR_DATA(x1+26);
+  149              LCD_WR_DATA(x2+26);
+  150              LCD_WR_REG(0x2b);//行地址设置
+  151              LCD_WR_DATA(y1+1);
+  152              LCD_WR_DATA(y2+1);
+  153              LCD_WR_REG(0x2c);//储存器写
+  154            }
+  155            else if(USE_HORIZONTAL==2)
+  156            {
+  157              LCD_WR_REG(0x2a);//列地址设置
+  158              LCD_WR_DATA(x1+1);
+  159              LCD_WR_DATA(x2+1);
+  160              LCD_WR_REG(0x2b);//行地址设置
+  161              LCD_WR_DATA(y1+26);
+  162              LCD_WR_DATA(y2+26);
+  163              LCD_WR_REG(0x2c);//储存器写
+  164            }
+  165            else
+  166            {
+  167              LCD_WR_REG(0x2a);//列地址设置
+  168              LCD_WR_DATA(x1+1);
+  169              LCD_WR_DATA(x2+1);
+  170              LCD_WR_REG(0x2b);//行地址设置
+  171              LCD_WR_DATA(y1+26);
+  172              LCD_WR_DATA(y2+26);
+  173              LCD_WR_REG(0x2c);//储存器写
+  174            }
+  175          }
+  176          */
+  177          /******************************************************************************
+  178                函数说明：LCD初始化函数
+  179                入口数据：无
+  180                返回值：  无
+  181          ******************************************************************************/
+  182          
+  183          void Lcd_Init(void)
+  184          {
+  185   1      #if SOFTWARE
+  186   1      
+  187   1      #else
+C251 COMPILER V5.60.0,  lcd_init                                                           22/02/23  20:33:57  PAGE 4   
+
+                 SPI_Init();
+               #endif
+  190   1        
+  191   1        LCD_RES_Clr();//复位
+  192   1        Delay_ms(100);
+  193   1        LCD_RES_Set();
+  194   1        Delay_ms(100);
+  195   1        
+  196   1        //LCD_BLK_Set();//打开背光
+  197   1        Delay_ms(100);
+  198   1        
+  199   1        LCD_WR_REG(0x11); 
+  200   1        delay_ms(120); 
+  201   1        LCD_WR_REG(0x36); 
+  202   1        if(USE_HORIZONTAL==0)LCD_WR_DATA8(0x00);
+  203   1        else if(USE_HORIZONTAL==1)LCD_WR_DATA8(0xC0);
+  204   1        else if(USE_HORIZONTAL==2)LCD_WR_DATA8(0x70);
+  205   1        else LCD_WR_DATA8(0xA0);
+  206   1      
+  207   1        LCD_WR_REG(0x3A);
+  208   1        LCD_WR_DATA8(0x05);
+  209   1      
+  210   1        LCD_WR_REG(0xB2);
+  211   1        LCD_WR_DATA8(0x0C);
+  212   1        LCD_WR_DATA8(0x0C);
+  213   1        LCD_WR_DATA8(0x00);
+  214   1        LCD_WR_DATA8(0x33);
+  215   1        LCD_WR_DATA8(0x33); 
+  216   1      
+  217   1        LCD_WR_REG(0xB7); 
+  218   1        LCD_WR_DATA8(0x35);  
+  219   1      
+  220   1        LCD_WR_REG(0xBB);
+  221   1        LCD_WR_DATA8(0x19);
+  222   1      
+  223   1        LCD_WR_REG(0xC0);
+  224   1        LCD_WR_DATA8(0x2C);
+  225   1      
+  226   1        LCD_WR_REG(0xC2);
+  227   1        LCD_WR_DATA8(0x01);
+  228   1      
+  229   1        LCD_WR_REG(0xC3);
+  230   1        LCD_WR_DATA8(0x12);   
+  231   1      
+  232   1        LCD_WR_REG(0xC4);
+  233   1        LCD_WR_DATA8(0x20);  
+  234   1      
+  235   1        LCD_WR_REG(0xC6); 
+  236   1        LCD_WR_DATA8(0x0F);    
+  237   1      
+  238   1        LCD_WR_REG(0xD0); 
+  239   1        LCD_WR_DATA8(0xA4);
+  240   1        LCD_WR_DATA8(0xA1);
+  241   1      
+  242   1        LCD_WR_REG(0xE0);
+  243   1        LCD_WR_DATA8(0xD0);
+  244   1        LCD_WR_DATA8(0x04);
+  245   1        LCD_WR_DATA8(0x0D);
+  246   1        LCD_WR_DATA8(0x11);
+  247   1        LCD_WR_DATA8(0x13);
+  248   1        LCD_WR_DATA8(0x2B);
+  249   1        LCD_WR_DATA8(0x3F);
+  250   1        LCD_WR_DATA8(0x54);
+  251   1        LCD_WR_DATA8(0x4C);
+  252   1        LCD_WR_DATA8(0x18);
+  253   1        LCD_WR_DATA8(0x0D);
+C251 COMPILER V5.60.0,  lcd_init                                                           22/02/23  20:33:57  PAGE 5   
+
+  254   1        LCD_WR_DATA8(0x0B);
+  255   1        LCD_WR_DATA8(0x1F);
+  256   1        LCD_WR_DATA8(0x23);
+  257   1      
+  258   1        LCD_WR_REG(0xE1);
+  259   1        LCD_WR_DATA8(0xD0);
+  260   1        LCD_WR_DATA8(0x04);
+  261   1        LCD_WR_DATA8(0x0C);
+  262   1        LCD_WR_DATA8(0x11);
+  263   1        LCD_WR_DATA8(0x13);
+  264   1        LCD_WR_DATA8(0x2C);
+  265   1        LCD_WR_DATA8(0x3F);
+  266   1        LCD_WR_DATA8(0x44);
+  267   1        LCD_WR_DATA8(0x51);
+  268   1        LCD_WR_DATA8(0x2F);
+  269   1        LCD_WR_DATA8(0x1F);
+  270   1        LCD_WR_DATA8(0x1F);
+  271   1        LCD_WR_DATA8(0x20);
+  272   1        LCD_WR_DATA8(0x23);
+  273   1      
+  274   1        LCD_WR_REG(0x21); 
+  275   1      
+  276   1        LCD_WR_REG(0x29); 
+  277   1      } 
+  278          /*
+  279          void Lcd_Init(void)
+  280          {
+  281            //SPI_Init();
+  282            
+  283            LCD_RES_Clr();//复位
+  284            Delay_ms(100);
+  285            LCD_RES_Set();
+  286            Delay_ms(100);
+  287            
+  288            //LCD_BLK_Set();//打开背光
+  289            Delay_ms(100);
+  290            LCD_WR_REG(0x11);     //Sleep out
+  291            delay_ms(120);                //Delay 120ms
+  292            LCD_WR_REG(0xB1);     //Normal mode
+  293            LCD_WR_DATA8(0x05);   
+  294            LCD_WR_DATA8(0x3C);   
+  295            LCD_WR_DATA8(0x3C);   
+  296            LCD_WR_REG(0xB2);     //Idle mode
+  297            LCD_WR_DATA8(0x05);   
+  298            LCD_WR_DATA8(0x3C);   
+  299            LCD_WR_DATA8(0x3C);   
+  300            LCD_WR_REG(0xB3);     //Partial mode
+  301            LCD_WR_DATA8(0x05);   
+  302            LCD_WR_DATA8(0x3C);   
+  303            LCD_WR_DATA8(0x3C);   
+  304            LCD_WR_DATA8(0x05);   
+  305            LCD_WR_DATA8(0x3C);   
+  306            LCD_WR_DATA8(0x3C);   
+  307            LCD_WR_REG(0xB4);     //Dot inversion
+  308            LCD_WR_DATA8(0x03);   
+  309            LCD_WR_REG(0xC0);     //AVDD GVDD
+  310            LCD_WR_DATA8(0xAB);   
+  311            LCD_WR_DATA8(0x0B);   
+  312            LCD_WR_DATA8(0x04);   
+  313            LCD_WR_REG(0xC1);     //VGH VGL
+  314            LCD_WR_DATA8(0xC5);   //C0
+  315            LCD_WR_REG(0xC2);     //Normal Mode
+  316            LCD_WR_DATA8(0x0D);   
+  317            LCD_WR_DATA8(0x00);   
+  318            LCD_WR_REG(0xC3);     //Idle
+  319            LCD_WR_DATA8(0x8D);   
+C251 COMPILER V5.60.0,  lcd_init                                                           22/02/23  20:33:57  PAGE 6   
+
+  320            LCD_WR_DATA8(0x6A);   
+  321            LCD_WR_REG(0xC4);     //Partial+Full
+  322            LCD_WR_DATA8(0x8D);   
+  323            LCD_WR_DATA8(0xEE);   
+  324            LCD_WR_REG(0xC5);     //VCOM
+  325            LCD_WR_DATA8(0x0F);   
+  326            LCD_WR_REG(0xE0);     //positive gamma
+  327            LCD_WR_DATA8(0x07);   
+  328            LCD_WR_DATA8(0x0E);   
+  329            LCD_WR_DATA8(0x08);   
+  330            LCD_WR_DATA8(0x07);   
+  331            LCD_WR_DATA8(0x10);   
+  332            LCD_WR_DATA8(0x07);   
+  333            LCD_WR_DATA8(0x02);   
+  334            LCD_WR_DATA8(0x07);   
+  335            LCD_WR_DATA8(0x09);   
+  336            LCD_WR_DATA8(0x0F);   
+  337            LCD_WR_DATA8(0x25);   
+  338            LCD_WR_DATA8(0x36);   
+  339            LCD_WR_DATA8(0x00);   
+  340            LCD_WR_DATA8(0x08);   
+  341            LCD_WR_DATA8(0x04);   
+  342            LCD_WR_DATA8(0x10);   
+  343            LCD_WR_REG(0xE1);     //negative gamma
+  344            LCD_WR_DATA8(0x0A);   
+  345            LCD_WR_DATA8(0x0D);   
+  346            LCD_WR_DATA8(0x08);   
+  347            LCD_WR_DATA8(0x07);   
+  348            LCD_WR_DATA8(0x0F);   
+  349            LCD_WR_DATA8(0x07);   
+  350            LCD_WR_DATA8(0x02);   
+  351            LCD_WR_DATA8(0x07);   
+  352            LCD_WR_DATA8(0x09);   
+  353            LCD_WR_DATA8(0x0F);   
+  354            LCD_WR_DATA8(0x25);   
+  355            LCD_WR_DATA8(0x35);   
+  356            LCD_WR_DATA8(0x00);   
+  357            LCD_WR_DATA8(0x09);   
+  358            LCD_WR_DATA8(0x04);   
+  359            LCD_WR_DATA8(0x10);
+  360               
+  361            LCD_WR_REG(0xFC);    
+  362            LCD_WR_DATA8(0x80);  
+  363              
+  364            LCD_WR_REG(0x3A);     
+  365            LCD_WR_DATA8(0x05);   
+  366            LCD_WR_REG(0x36);
+  367            if(USE_HORIZONTAL==0)LCD_WR_DATA8(0x08);
+  368            else if(USE_HORIZONTAL==1)LCD_WR_DATA8(0xC8);
+  369            else if(USE_HORIZONTAL==2)LCD_WR_DATA8(0x78);
+  370            else LCD_WR_DATA8(0xA8);   
+  371            LCD_WR_REG(0x21);     //Display inversion
+  372            LCD_WR_REG(0x29);     //Display on
+  373            LCD_WR_REG(0x2A);     //Set Column Address
+  374            LCD_WR_DATA8(0x00);   
+  375            LCD_WR_DATA8(0x1A);  //26  
+  376            LCD_WR_DATA8(0x00);   
+  377            LCD_WR_DATA8(0x69);   //105 
+  378            LCD_WR_REG(0x2B);     //Set Page Address
+  379            LCD_WR_DATA8(0x00);   
+  380            LCD_WR_DATA8(0x01);    //1
+  381            LCD_WR_DATA8(0x00);   
+  382            LCD_WR_DATA8(0xA0);    //160
+  383            LCD_WR_REG(0x2C); 
+  384          
+  385          }
+C251 COMPILER V5.60.0,  lcd_init                                                           22/02/23  20:33:57  PAGE 7   
+
+  386          
+  387          */
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       458     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =    ------          4
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =    ------     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  2 WARNING(S),  0 ERROR(S)

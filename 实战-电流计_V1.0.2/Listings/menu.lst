@@ -1,0 +1,217 @@
+C251 COMPILER V5.60.0,  menu                                                               24/02/23  15:26:35  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE menu
+OBJECT MODULE PLACED IN .\Objects\menu.obj
+COMPILER INVOKED BY: D:\keil\C251\BIN\C251.EXE Menu\menu.c XSMALL BROWSE INCDIR(.\ADC;.\I2C;.\LCD;.\System;.\UART1;.\Men
+                    -u;.\KEY;..\实战-电流计_V2.0;.\Timer;.\SPI_Handler;.\CH224K;.\Pwm) DEBUG PRINT(.\Listings\menu.lst) TABS(2) OBJECT(.\Obje
+                    -cts\menu.obj) 
+
+stmt  level    source
+
+    1          /*
+    2          *注意：使用keil需要设置为GB2312
+    3          *==============================多级菜单配置源文件=======================
+    4          *-------------------------------------------------------------------
+    5          *文件修改历史
+    6          *<时间>    | <版本>  | <作者>  | <功能>  
+    7          *2023.2.24 | V1.0.2   | 小夏    | 多级菜单索引（数组查表法）
+    8          *-------------------------------------------------------------------
+    9          */
+   10          
+   11          #include "menu.h"
+   12          #include "menu_Ui.h"
+   13          u8 index_cp;
+   14          void (*current_operation_func)(void);
+   15          
+   16          static void menu_part_main(void);
+   17          
+   18          static void menu_part_one(void);
+   19          static void menu_part_tow(void);
+   20          static void menu_part_three(void);
+   21          static void menu_part_four(void);
+   22          
+   23          static void menu_part_one_one(void);
+   24          static void menu_part_one_tow(void);
+   25          static void menu_part_one_three(void);
+   26          
+   27          static void menu_part_tow_one(void);
+   28          
+   29          static void menu_part_three_one(void);
+   30          
+   31          static void menu_part_four_one(void);
+   32          static void menu_part_four_one_one(void);
+   33          static void menu_part_four_one_tow(void);
+   34          static void menu_part_four_one_threen(void);
+   35          
+   36          static void menu_part_one_one_one(void);
+   37          static void menu_part_one_one_tow(void);
+   38          static void menu_part_one_one_three(void);
+   39          static void menu_part_one_one_four(void);
+   40          static void menu_part_one_one_five(void);
+   41          
+   42          static void menu_part_one_tow_one(void);
+   43          static void menu_part_one_tow_tow(void);
+   44          static void menu_part_one_tow_three(void);
+   45          static void menu_part_one_tow_four(void);
+   46          
+   47          
+   48          Menu_Creat M_G[25]={
+   49              {0,1,1,0,(*menu_part_main)}, //第一级
+   50              
+   51              {1,2,5,0,(*menu_part_one)}, //第二级  
+   52              {2,3,8,0,(*menu_part_tow)}, //第二级  
+   53              {3,4,9,0,(*menu_part_three)}, //第二级  
+   54              {4,1,10,0,(*menu_part_four)}, //第二级  
+   55          
+   56              {5,6,14,1,(*menu_part_one_one)}, //第三级 
+   57              {6,7,19,1,(*menu_part_one_tow)}, //第三级 
+C251 COMPILER V5.60.0,  menu                                                               24/02/23  15:26:35  PAGE 2   
+
+   58              {7,5,7,1,(*menu_part_one_three)}, //第三级  
+   59          
+   60              {8,8,8,2,(*menu_part_tow_one)}, //第三级
+   61              
+   62              {9,9,9,3,(*menu_part_three_one)}, //第三级  
+   63          
+   64              {10,11,10,4,(*menu_part_four_one)}, //第三级 电流电压保护 
+   65              {11,12,11,4,(*menu_part_four_one_one)}, //第三级 电流+100ma 
+   66              {12,13,12,4,(*menu_part_four_one_tow)}, //第三级 电流-100ma 
+   67              {13,10,13,4,(*menu_part_four_one_threen)}, //第三级 温度+1C 
+   68              
+   69              {14,15,14,5,(*menu_part_one_one_one)},    
+   70              {15,16,15,5,(*menu_part_one_one_tow)},
+   71              {16,17,16,5,(*menu_part_one_one_three)},
+   72              {17,18,17,5,(*menu_part_one_one_four)},
+   73              {18,15,18,5,(*menu_part_one_one_five)},
+   74          
+   75              {19,20,19,6,(*menu_part_one_tow_one)},
+   76              {20,21,19,6,(*menu_part_one_tow_tow)},
+   77              {21,22,19,6,(*menu_part_one_tow_three)},
+   78              {22,19,19,6,(*menu_part_one_tow_four)},   
+   79          };
+   80          
+   81          void Menu_Loop(void){
+   82   1            current_operation_func=M_G[index_cp].current_operation;
+   83   1      
+   84   1            current_operation_func(); 
+   85   1        
+   86   1      }
+   87          
+   88          static void menu_part_main(void){
+   89   1        menu_Ui_main();
+   90   1        
+   91   1      }
+   92          
+   93          static void menu_part_one(void){
+   94   1        menu_Ui_Choose_Menu(0);
+   95   1      }
+   96          
+   97          static void menu_part_tow(void){
+   98   1        menu_Ui_Choose_Menu(1); 
+   99   1      }
+  100          
+  101          static void menu_part_three(void){
+  102   1        menu_Ui_Choose_Menu(2); 
+  103   1      }
+  104          
+  105          static void menu_part_four(void){
+  106   1        menu_Ui_Choose_Menu(3); 
+  107   1      }
+  108          
+  109          static void menu_part_one_one(void){
+  110   1        menu_Ui_PD_QC_Menu(0);
+  111   1      }
+  112          
+  113          static void menu_part_one_tow(void){
+  114   1        menu_Ui_PD_QC_Menu(1);
+  115   1      }
+  116          
+  117          static void menu_part_one_three(void){
+  118   1        menu_Ui_PD_QC_Menu(2);
+  119   1      }
+  120          
+  121          static void menu_part_tow_one(void){
+  122   1          menu_Ui_Voltage_current_Line_Menu();
+  123   1      }
+C251 COMPILER V5.60.0,  menu                                                               24/02/23  15:26:35  PAGE 3   
+
+  124          
+  125          static void menu_part_three_one(void){
+  126   1          menu_Ui_Voltage_Line_Menu();  
+*** WARNING C140 IN LINE 126 OF Menu\menu.c: 'menu_Ui_Voltage_Line_Menu' undefined; assuming 'extern int menu_Ui_Voltage
+             -_Line_Menu()'
+  127   1      }
+  128          
+  129          static void menu_part_four_one(void){
+  130   1          menu_Ui_Current_Temp_protect(); 
+  131   1      }
+  132          
+  133          static void menu_part_four_one_one(void){
+  134   1        menu_Ui_Current_Temp_protect();
+  135   1      }
+  136          
+  137          static void menu_part_four_one_tow(void){
+  138   1        menu_Ui_Current_Temp_protect();
+  139   1      }
+  140          
+  141          static void menu_part_four_one_threen(void){
+  142   1        menu_Ui_Current_Temp_protect();
+  143   1      }
+  144          
+  145          static void menu_part_one_one_one(void){
+  146   1        menu_Ui_PD_Voltage_Current();
+  147   1      }
+  148          static void menu_part_one_one_tow(void){
+  149   1        menu_Ui_PD_Voltage_Current(); 
+  150   1      }
+  151          
+  152          static void menu_part_one_one_three(void){
+  153   1        menu_Ui_PD_Voltage_Current();   
+  154   1      }
+  155          
+  156          static void menu_part_one_one_four(void){
+  157   1        menu_Ui_PD_Voltage_Current();   
+  158   1      }
+  159          
+  160          static void menu_part_one_one_five(void){
+  161   1        menu_Ui_PD_Voltage_Current();   
+  162   1      }
+  163          static void menu_part_one_tow_one(void){
+  164   1        menu_Ui_QC_Voltage_Current(); 
+  165   1      }
+  166          static void menu_part_one_tow_tow(void){
+  167   1        menu_Ui_QC_Voltage_Current(); 
+  168   1      }
+  169          static void menu_part_one_tow_three(void){
+  170   1        menu_Ui_QC_Voltage_Current(); 
+  171   1      }
+  172          static void menu_part_one_tow_four(void){
+  173   1        menu_Ui_QC_Voltage_Current(); 
+  174   1      }
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       100     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =       153     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+C251 COMPILER V5.60.0,  menu                                                               24/02/23  15:26:35  PAGE 4   
+
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =       154     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

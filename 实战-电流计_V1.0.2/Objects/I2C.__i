@@ -1,0 +1,1 @@
+"I2C\I2C.c" XSMALL BROWSE INCDIR(.\ADC;.\I2C;.\LCD;.\System;.\UART1;.\Menu;.\KEY;..\实战-电流计_V2.0;.\Timer;.\SPI_Handler;.\CH224K;.\Pwm) DEBUG PRINT(.\Listings\I2C.lst) TABS (2) OBJECT(.\Objects\I2C.obj)

@@ -1,0 +1,281 @@
+C251 COMPILER V5.60.0,  ADC                                                                24/02/23  15:19:18  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE ADC
+OBJECT MODULE PLACED IN .\Objects\ADC.obj
+COMPILER INVOKED BY: D:\keil\C251\BIN\C251.EXE ADC\ADC.c XSMALL BROWSE INCDIR(.\ADC;.\I2C;.\LCD;.\System;.\UART1;.\Menu;
+                    -.\KEY;..\实战-电流计_V2.0;.\Timer;.\SPI_Handler;.\CH224K;.\Pwm) DEBUG PRINT(.\Listings\ADC.lst) TABS(2) OBJECT(.\Objects
+                    -\ADC.obj) 
+
+stmt  level    source
+
+    1          /*
+    2          *注意：使用keil需要设置为GB2312
+    3          *==============================ADC采样源文件=======================
+    4          *-------------------------------------------------------------------
+    5          *文件修改历史
+    6          *<时间>    | <版本>  | <作者>  | <功能>  
+    7          *2023.2.24 | V1.0.2   | 小夏    | 主电压、主电流、D+，D-的ADC采样
+    8          *-------------------------------------------------------------------
+    9          *如需要教学请到CSDN上面搜索"单片有机机"的STC32G专栏
+   10          */
+   11          
+   12          #include "ADC.h"
+   13          
+   14          float dat=0;
+   15          u16 current_dat;
+   16          
+   17          
+   18          float current_ALL;
+   19          int i;
+   20          int ins;
+   21          float VOL_dat;
+   22          float VOL_dat_SUM;
+   23          int ADC_Loop;
+   24          
+   25          float ADC_Max_Value;
+   26          float ADC_Min_Value;
+   27          float ADC_Sun_Value;
+   28          float VOL_dat_SUM;
+   29          
+   30          float D_Left_dats;
+   31          float D_Left_Value;
+   32          float D_LEFT_dat;
+   33          
+   34          float D_RIGHT_dats;
+   35          float D_RIGHT_Value;
+   36          float D_RIGHT_dat;
+   37          
+   38          float Voltage_SUM;
+   39          float Voltage_SUM_average;
+   40          
+   41          
+   42          void ADC_Init(void){
+   43   1      //  P0M1 = 0x00;   
+   44   1      //  P0M0 = 0x01;
+   45   1        //ADC_CONTR = 0x0A;
+   46   1        ADC_CONTR = 0x0A;
+   47   1        ADCTIM = 0xFF;
+   48   1        ADCCFG = 0x20;
+   49   1        
+   50   1        ADC_POWER=1;  
+   51   1      }
+   52          
+   53          /*-------------------------------------------------------------
+   54          *功能：主电压的ADC采样初始化配置
+   55          *作者：小夏
+   56          *修改时间：2023.2.24
+   57          *参考：<STC32G技术手册>
+C251 COMPILER V5.60.0,  ADC                                                                24/02/23  15:19:18  PAGE 2   
+
+   58          *-------------------------------------------------------------*/
+   59          float ADC_Voltage_Read_Value(void){
+   60   1        ADC_CONTR = 0x0A;
+   61   1        ADC_POWER=1;
+   62   1        ADC_START = 1;
+   63   1        while(!ADC_FLAG);
+   64   1        ADC_FLAG=0;
+   65   1        dat =(ADC_RES<<8)|ADC_RESL;
+   66   1      
+   67   1        return dat;
+   68   1      }
+   69          /*-------------------------------------------------------------
+   70          *功能：主电压的ADC采样12次求出最大值和最小值（中位值平均滤波算法）求出主电压。
+   71          *同时采用分点计算。
+   72          *作者：小夏
+   73          *修改时间：2023.2.24
+   74          *参考：大脑（自己）
+   75          *-------------------------------------------------------------*/
+   76          float ADC_Voltage_Read_Value_average(void){
+   77   1      //  VOL_dat=0;
+   78   1      //  VOL_dat=((ADC_Voltage_Read_Value()*2.5)/4096L)*11.214;
+   79   1        ADC_Max_Value=VOL_dat;
+   80   1        ADC_Min_Value=VOL_dat;
+   81   1        Voltage_SUM=0;
+   82   1        for(ins=0;ins<12;ins++){
+   83   2          VOL_dat_SUM=(ADC_Voltage_Read_Value()*2.5)/4059L;
+   84   2          if(VOL_dat_SUM<=0.307){//7V以下
+   85   3            VOL_dat=VOL_dat_SUM*22.229;
+   86   3          }else if(VOL_dat_SUM>0.307 && VOL_dat_SUM<=0.394){//7V-9V
+   87   3            VOL_dat=VOL_dat_SUM*22.600;
+   88   3          }else if(VOL_dat_SUM>0.394 && VOL_dat_SUM<=0.523){//9V-12V
+   89   3            VOL_dat=VOL_dat_SUM*22.650;
+   90   3          }else if(VOL_dat_SUM>0.523 && VOL_dat_SUM<=0.653){//12V-15V
+   91   3            VOL_dat=VOL_dat_SUM*22.700;
+   92   3          }else if(VOL_dat_SUM>0.653 && VOL_dat_SUM<=0.780){//15V-18V
+   93   3            VOL_dat=VOL_dat_SUM*22.750;
+   94   3          }else if(VOL_dat_SUM>0.780){//18V以上
+   95   3            VOL_dat=VOL_dat_SUM*22.800;
+   96   3          }
+   97   2          if(VOL_dat>ADC_Max_Value){
+   98   3            ADC_Max_Value=VOL_dat;
+   99   3            
+  100   3          }
+  101   2          else if(VOL_dat<ADC_Min_Value){
+  102   3            ADC_Min_Value=VOL_dat;
+  103   3      
+  104   3          }
+  105   2          Voltage_SUM+=VOL_dat;
+  106   2        } 
+  107   1        ADC_Sun_Value=ADC_Max_Value-ADC_Min_Value;
+  108   1        Voltage_SUM_average=(Voltage_SUM-ADC_Max_Value-ADC_Min_Value)/10;
+  109   1        return Voltage_SUM_average;
+  110   1        
+  111   1      }
+  112          /*-------------------------------------------------------------
+  113          *功能：曲线快速刷新获取电压
+  114          *作者：小夏
+  115          *修改时间：2023.2.24
+  116          *参考：大脑（自己）
+  117          *-------------------------------------------------------------*/
+  118          float ADC_Voltage_Read_Value_Line(void){
+  119   1          VOL_dat_SUM=(ADC_Voltage_Read_Value()*2.5)/4059L;
+  120   1          if(VOL_dat_SUM<=0.307){//7V以下
+  121   2            VOL_dat=VOL_dat_SUM*22.229;
+  122   2          }else if(VOL_dat_SUM>0.307 && VOL_dat_SUM<=0.394){//7V-9V
+  123   2            VOL_dat=VOL_dat_SUM*22.600;
+C251 COMPILER V5.60.0,  ADC                                                                24/02/23  15:19:18  PAGE 3   
+
+  124   2          }else if(VOL_dat_SUM>0.394 && VOL_dat_SUM<=0.523){//9V-12V
+  125   2            VOL_dat=VOL_dat_SUM*22.650;
+  126   2          }else if(VOL_dat_SUM>0.523 && VOL_dat_SUM<=0.653){//12V-15V
+  127   2            VOL_dat=VOL_dat_SUM*22.700;
+  128   2          }else if(VOL_dat_SUM>0.653 && VOL_dat_SUM<=0.780){//15V-18V
+  129   2            VOL_dat=VOL_dat_SUM*22.750;
+  130   2          }else if(VOL_dat_SUM>0.780){//18V以上
+  131   2            VOL_dat=VOL_dat_SUM*22.800;
+  132   2          }
+  133   1        return VOL_dat; 
+  134   1      }
+  135          /*-------------------------------------------------------------
+  136          *功能：ina199电流的ADC采样初始化配置
+  137          *作者：小夏
+  138          *修改时间：2023.2.24
+  139          *参考：<STC32G技术手册>
+  140          *-------------------------------------------------------------*/
+  141          float ADC_Read_current_Value(void){
+  142   1          ADC_CONTR = 0x0B;
+  143   1          ADC_POWER=1;  
+  144   1          ADC_START = 1;
+  145   1        //  Delay_ms(2);
+  146   1          while(!ADC_FLAG);
+  147   1          ADC_FLAG=0;
+  148   1          current_dat =(ADC_RES<<8)|ADC_RESL;
+  149   1         
+  150   1        return current_dat;
+  151   1      }
+  152          /*-------------------------------------------------------------
+  153          *功能：电流的采样
+  154          *作者：小夏
+  155          *修改时间：2023.2.24
+  156          *参考：大脑（自己）
+  157          *-------------------------------------------------------------*/
+  158          float ADC_Read_current_Value_average(void){
+  159   1        current_ALL =0;
+  160   1        for(ins=0;ins<3;ins++){
+  161   2          current_ALL+=ADC_Read_current_Value();
+  162   2      
+  163   2        }
+  164   1        current_ALL=current_ALL/3;
+  165   1        current_ALL=((current_ALL*2.5)/4096L)*1.794-0.080;
+  166   1        if(current_ALL<=-0&&current_ALL>-1000|current_ALL==0){
+  167   2          current_ALL=0;
+  168   2        }
+  169   1        return current_ALL;
+  170   1      }
+  171          /*-------------------------------------------------------------
+  172          *功能：C+电压的ADC采样初始化配置
+  173          *作者：小夏
+  174          *修改时间：2023.2.24
+  175          *参考：<STC32G技术手册>
+  176          *-------------------------------------------------------------*/
+  177          //读取D+引脚电压
+  178          float ADC_Read_D_LEFT_Value(void){
+  179   1          ADC_CONTR = 0x09;
+  180   1          ADC_POWER=1;  
+  181   1          ADC_START = 1;
+  182   1          while(!ADC_FLAG);
+  183   1          ADC_FLAG=0;
+  184   1          D_Left_dats =(ADC_RES<<8)|ADC_RESL;
+  185   1         
+  186   1        return D_Left_dats;
+  187   1      }
+  188          /*-------------------------------------------------------------
+  189          *功能：D+的ADC采样
+C251 COMPILER V5.60.0,  ADC                                                                24/02/23  15:19:18  PAGE 4   
+
+  190          *作者：小夏
+  191          *修改时间：2023.2.24
+  192          *参考：<STC32G技术手册>
+  193          *-------------------------------------------------------------*/
+  194          float ADC_D_LEFT_Read_Value_average(void){
+  195   1        
+  196   1      
+  197   1          D_Left_Value=(ADC_Read_D_LEFT_Value()*2.5)/4059L;
+  198   1          if(D_Left_Value>0.100){
+  199   2            D_LEFT_dat=D_Left_Value*21.5;
+  200   2          }else{
+  201   2            D_LEFT_dat=D_Left_Value*17.098; 
+  202   2          }
+  203   1        return D_LEFT_dat;  
+  204   1      }
+  205          /*-------------------------------------------------------------
+  206          *功能：D-的ADC采样初始化配置
+  207          *作者：小夏
+  208          *修改时间：2023.2.24
+  209          *参考：<STC32G技术手册>
+  210          *-------------------------------------------------------------*/
+  211          float ADC_Read_D_RIGHT_Value(void){
+  212   1          ADC_CONTR = 0x08;
+  213   1          ADC_POWER=1;  
+  214   1          ADC_START = 1;
+  215   1          while(!ADC_FLAG);
+  216   1          ADC_FLAG=0;
+  217   1          D_RIGHT_dats =(ADC_RES<<8)|ADC_RESL;
+  218   1         
+  219   1        return D_RIGHT_dats;
+  220   1      }
+  221          /*-------------------------------------------------------------
+  222          *功能：D-的ADC采样
+  223          *作者：小夏
+  224          *修改时间：2023.2.24
+  225          *参考：<STC32G技术手册>
+  226          *-------------------------------------------------------------*/
+  227          float ADC_D_RIGHT_Read_Value_average(void){
+  228   1        
+  229   1      
+  230   1          D_RIGHT_Value=(ADC_Read_D_RIGHT_Value()*2.5)/4059L;
+  231   1          if(D_RIGHT_Value>0.100){
+  232   2            D_RIGHT_dat=D_RIGHT_Value*21.5;     
+  233   2          }else{
+  234   2            D_RIGHT_dat=D_RIGHT_Value*17.098;
+  235   2          }
+  236   1       
+  237   1        return D_RIGHT_dat; 
+  238   1      }
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =      1148     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =        68     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+C251 COMPILER V5.60.0,  ADC                                                                24/02/23  15:19:18  PAGE 5   
+
+  const size           =    ------     ------
+  hconst size          =         8     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

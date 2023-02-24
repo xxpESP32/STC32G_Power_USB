@@ -1,0 +1,1118 @@
+C251 COMPILER V5.60.0,  KEY                                                                24/02/23  15:43:51  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE KEY
+OBJECT MODULE PLACED IN .\Objects\KEY.obj
+COMPILER INVOKED BY: D:\keil\C251\BIN\C251.EXE KEY\KEY.c XSMALL BROWSE INCDIR(.\ADC;.\I2C;.\LCD;.\System;.\UART1;.\Menu;
+                    -.\KEY;..\实战-电流计_V2.0;.\Timer;.\SPI_Handler;.\CH224K;.\Pwm) DEBUG PRINT(.\Listings\KEY.lst) TABS(2) OBJECT(.\Objects
+                    -\KEY.obj) 
+
+stmt  level    source
+
+    1          /*
+    2          *注意：使用keil需要设置为GB2312
+    3          *==============================按键源文件=======================
+    4          *-------------------------------------------------------------------
+    5          *文件修改历史
+    6          *<时间>    | <版本>  | <作者>  | <功能>  
+    7          *2023.2.24 | V1.0.2   | 小夏    | 采用的是轮询方案读取按键（使用按键外部中断是会出现刷新有残影）
+    8          *-------------------------------------------------------------------
+    9          */
+   10          
+   11          #include "KEY.h"
+   12          #include "menu.h"
+   13          #include "LCD.h"
+   14          #include "lcd_init.h"
+   15          #include "menu_Ui.h"
+   16          #include "Timer.h"
+   17          #include "Pic.h"
+   18          #include "CH224K.h"
+   19          u8 Line_x;
+   20          u8 sta_x=10;
+   21          int Line_y;
+   22          u8 Clear_FLAG=0;
+   23          u8 nember_Flag;
+   24          u8 Time_Change_FLAG;
+   25          u8 Begin_Stop_Flag;
+   26          u8 Begin_Stop_Ri_Flag;
+   27          static void PD_Dislay_Ui(void);
+   28          
+   29          //******************
+   30          //----2023.2.1----
+   31          //更新内容完善QC诱骗界面
+   32          u8 QC_Power_FLAG;
+   33          //******************
+   34          static void QC_Dislay_Ui(void);
+   35          static void Voltage_OUTPUT_5V_Succeed(void);
+   36          /*-------------------------------------------------------------
+   37          *功能：按键初始化配置
+   38          *作者：小夏
+   39          *修改时间：2023.2.24
+   40          *参考：<STC32G数据手册>
+   41          *-------------------------------------------------------------
+   42          *如需要教学请到CSDN上面搜索"单片有机机"的STC32G专栏
+   43          */
+   44          void KEY_Init(void){
+   45   1        
+   46   1       P2IM0=0x00;  
+   47   1       P2IM1=0x00;
+   48   1       P2INTE=0x0e;
+   49   1      
+   50   1       EA=1;  
+   51   1        
+   52   1      }
+   53          /*-------------------------------------------------------------
+   54          *功能：按键读取进入多级菜单配置
+   55          *作者：小夏
+   56          *修改时间：2023.2.24
+   57          *参考：（大脑）自己
+C251 COMPILER V5.60.0,  KEY                                                                24/02/23  15:43:51  PAGE 2   
+
+   58          *-------------------------------------------------------------*/
+   59          void Key_EVENT(void){
+   60   1            if(KEY_LEFT_Read ==0){ //右按键
+   61   2            Delay_ms(10);
+   62   2            if(KEY_LEFT_Read ==0){
+   63   3            Diaplay_Begin_Stop(8); //暂停
+   64   3            Diaplay_Begin_Stop(9); //暂停       
+   65   3            index_cp=M_G[index_cp].next;
+   66   3            if(index_cp!=8 && index_cp!=9 &&index_cp!=10 && index_cp!=11 && index_cp!=12 && index_cp!=13 && index_
+             -cp!=15&& index_cp!=16&& index_cp!=17&& index_cp!=18 &&index_cp!=19&&index_cp!=20&& index_cp!=21&& index_cp!=22) LCD_Fill
+             -(0,0,240,135,BLACK);
+   67   3            //Display_main_Line();
+   68   3            //Display_main_Line_Voltage();
+   69   3            Current_Temp_Ui();
+   70   3            PD_Dislay_Ui();
+   71   3            QC_Dislay_Ui();
+   72   3            }
+   73   2          }
+   74   1          if(KEY_ENTER_Read==0){ //确定按键
+   75   2            Delay_ms(10);
+   76   2            if(KEY_ENTER_Read==0){
+   77   3            Current_Temp_add();
+   78   3            Change_Timer_Time();
+   79   3            Voltage_OUTPUT_5V_Succeed();
+   80   3            index_cp=M_G[index_cp].enter; 
+   81   3            LCD_Fill(0,0,240,135,BLACK);    
+   82   3            Display_main_Line();
+   83   3            Display_main_Line_Voltage();
+   84   3            Current_Temp_Ui();
+   85   3            PD_Dislay_Ui();
+   86   3            QC_Dislay_Ui();
+   87   3          }
+   88   2          }
+   89   1          if(KEY_BACK_Read==0){ //返回按键（左按键）
+   90   2            Delay_ms(10);
+   91   2            if(KEY_BACK_Read==0){
+   92   3            Current_Temp_Set_succeed();
+   93   3            index_cp=M_G[index_cp].back;         
+   94   3             LCD_Fill(0,0,240,135,BLACK);
+   95   3            
+   96   3            if(index_cp==0){//显示框图
+   97   4                menu_Ui_main_Rect_set_steup();      
+   98   4            }
+   99   3            Reset_Display_X_Line();//离线曲线
+  100   3            }
+  101   2          } 
+  102   1      
+  103   1        
+  104   1            Menu_Loop();  
+  105   1        
+  106   1      }
+  107          /*
+  108          void Key_Nvic_Isr(void) interrupt 39
+  109          {
+  110            u8 Key_Gpio=0;
+  111            Key_Gpio =P2INTF;
+  112            
+  113            if(Key_Gpio){
+  114            
+  115              if(Key_Gpio& 0x02){ //右按键
+  116                Delay_ms(50);
+  117                if(KEY_LEFT_Read ==0){
+  118                LCD_Fill(0,0,240,135,BLACK);
+  119                index_cp=M_G[index_cp].next;
+  120          
+  121           
+C251 COMPILER V5.60.0,  KEY                                                                24/02/23  15:43:51  PAGE 3   
+
+  122                }
+  123              }
+  124              if(Key_Gpio& 0x04){ //确定按键
+  125                Delay_ms(50);
+  126                if(KEY_ENTER_Read==0){
+  127                LCD_Fill(0,0,240,135,BLACK);
+  128                index_cp=M_G[index_cp].enter; 
+  129          
+  130              
+  131                if(index_cp==8){
+  132                  menu_Ui_main_Line();
+  133                }
+  134              
+  135              }
+  136              }
+  137              if(Key_Gpio& 0x08){ //返回按键（左按键）
+  138                Delay_ms(50);
+  139                if(KEY_BACK_Read==0){
+  140                Reset_Display_X_Line();
+  141          
+  142                index_cp=M_G[index_cp].back;         
+  143                LCD_Fill(0,0,240,135,BLACK);
+  144                
+  145                if(index_cp==0){//显示框图
+  146                    menu_Ui_main_Rect_set_steup();      
+  147                }
+  148          
+  149              }
+  150              } 
+  151          
+  152            } 
+  153                Menu_Loop();  
+  154          P2INTF =0x00;
+  155          }
+  156          */
+  157          
+  158          /*-------------------------------------------------------------
+  159          *功能：单次显示 menu_Ui_main的框图
+  160          *作者：小夏
+  161          *修改时间：2023.2.24
+  162          *参考：（大脑）自己
+  163          *-------------------------------------------------------------*/
+  164          void menu_Ui_main_Rect_set_steup(void){
+  165   1        LCD_DrawLine(204,0,204,18,GREEN);
+  166   1        LCD_DrawRectangle(0, 16, 240, 17,GREEN);
+  167   1        LCD_DrawRectangle(0, 116, 133, 117,GREEN);  
+  168   1        LCD_DrawRectangle(132, 117, 133, 135,GREEN);  
+  169   1        LCD_DrawRectangle(132, 17, 133, 117,GREEN); 
+  170   1        LCD_DrawRectangle(239, 17, 240, 117,GREEN); 
+  171   1        LCD_DrawRectangle(239, 116, 240, 135,GREEN);
+  172   1        
+  173   1        LCD_DrawRectangle(0, 16, 1, 116,GREEN); 
+  174   1        LCD_DrawRectangle(132, 57, 240, 58,GREEN);  
+  175   1        LCD_DrawRectangle(132, 107, 240, 108,GREEN);  
+  176   1        
+  177   1      }
+  178          /*-------------------------------------------------------------
+  179          *功能：单次显示显示框图
+  180          *作者：小夏
+  181          *修改时间：2023.2.24
+  182          *参考：（大脑）自己
+  183          *-------------------------------------------------------------*/
+  184          void menu_Ui_main_Line(u16 color){
+  185   1        for(Line_x=10;Line_x<=220;Line_x+=10){
+  186   2          LCD_DrawLine(Line_x,17,Line_x,19+99,color);//在指定位置画一条线
+  187   2        }   
+C251 COMPILER V5.60.0,  KEY                                                                24/02/23  15:43:51  PAGE 4   
+
+  188   1        for(Line_y=17;Line_y<=100+17;Line_y+=10){
+  189   2          LCD_DrawLine(10,Line_y,220,Line_y,color);//在指定位置画一条线
+  190   2        }   
+  191   1        
+  192   1      }
+  193          void menu_Ui_main_Line_Wen(u16 color){
+  194   1        for(Line_x=10;Line_x<=150;Line_x+=10){
+  195   2          LCD_DrawLine(Line_x,17,Line_x,19+99,color);//在指定位置画一条线
+  196   2        }   
+  197   1        for(Line_y=17;Line_y<=100+17;Line_y+=10){
+  198   2          LCD_DrawLine(10,Line_y,150,Line_y,color);//在指定位置画一条线
+  199   2        }   
+  200   1        
+  201   1      }
+  202          /*-------------------------------------------------------------
+  203          *功能：单次显示曲线的电压电流量程
+  204          *作者：小夏
+  205          *修改时间：2023.2.24
+  206          *参考：（大脑）自己
+  207          *-------------------------------------------------------------*/
+  208          void Reset_Display_X_Line(void){
+  209   1        if(index_cp==8){
+  210   2          FLAGS=0;
+  211   2          X_Voltage_Line=10;
+  212   2          X_Current_Line=10;
+  213   2          LCD_ShowString(9,3,"24V",YELLOW,BLACK,12,0);
+  214   2          LCD_ShowString(9,119,"0V",YELLOW,BLACK,12,0);
+  215   2          if(C_Range.Current_Range_Flag_one== 1){         
+  216   3            //显示最小电压电流  
+  217   3            LCD_ShowString(213-12,3,"0.5A",BLUE,BLACK,12,0);
+  218   3            LCD_ShowString(213,119,"0A",BLUE,BLACK,12,0);                   
+  219   3          }
+  220   2          if(C_Range.Current_Range_Flag_tow== 1){         
+  221   3                  //显示最小电压电流  
+  222   3                  LCD_ShowString(213,3,"1A",BLUE,BLACK,12,0);
+  223   3                  LCD_ShowString(213,119,"0A",BLUE,BLACK,12,0);                   
+  224   3          }
+  225   2          if(C_Range.Current_Range_Flag_three== 1){         
+  226   3                  //显示最小电压电流  
+  227   3                  LCD_ShowString(213,3,"5A",BLUE,BLACK,12,0);
+  228   3                  LCD_ShowString(213,119,"0A",BLUE,BLACK,12,0);                   
+  229   3          }
+  230   2          if(C_Range.Current_Range_Flag_four== 1){          
+  231   3                  //显示最小电压电流  
+  232   3                  LCD_ShowString(213,3,"5A",BLUE,BLACK,12,0);
+  233   3                  LCD_ShowString(213,119,"0A",BLUE,BLACK,12,0);                   
+  234   3          }     
+  235   2        } 
+  236   1      }
+  237          /*-------------------------------------------------------------
+  238          *功能：单次显示曲线的电压电流量程
+  239          *作者：小夏
+  240          *修改时间：2023.2.24
+  241          *参考：（大脑）自己
+  242          *-------------------------------------------------------------*/
+  243          void Display_main_Line(void){
+  244   1          if(index_cp==8){
+  245   2          menu_Ui_main_Line(RED);
+  246   2          FLAGS=1;
+  247   2          X_Voltage_Line=11;
+  248   2          X_Current_Line=10;
+  249   2            ADC_Get.Voltage_Value=ADC_Voltage_Read_Value_average();
+  250   2            if(ADC_Get.Voltage_Value<=6){
+  251   3                        //Voltage_Level_Flag
+  252   3                LCD_ShowString(9,3,"6V",YELLOW,BLACK,12,0);
+  253   3                LCD_ShowString(9,119,"0V",YELLOW,BLACK,12,0);
+C251 COMPILER V5.60.0,  KEY                                                                24/02/23  15:43:51  PAGE 5   
+
+  254   3            }
+  255   2            if(ADC_Get.Voltage_Value<=10&&ADC_Get.Voltage_Value>6){
+  256   3                LCD_ShowString(9,3,"10V",YELLOW,BLACK,12,0);
+  257   3                LCD_ShowString(9,119,"6V",YELLOW,BLACK,12,0);       
+  258   3            }
+  259   2            if(ADC_Get.Voltage_Value<=13&&ADC_Get.Voltage_Value>10){
+  260   3                LCD_ShowString(9,3,"13V",YELLOW,BLACK,12,0);
+  261   3                LCD_ShowString(9,119,"10V",YELLOW,BLACK,12,0);                  
+  262   3            }if(ADC_Get.Voltage_Value<=16&&ADC_Get.Voltage_Value>13){
+  263   3                LCD_ShowString(9,3,"16V",YELLOW,BLACK,12,0);
+  264   3                LCD_ShowString(9,119,"13V",YELLOW,BLACK,12,0);                  
+  265   3            }if(ADC_Get.Voltage_Value<=21&&ADC_Get.Voltage_Value>16){
+  266   3                LCD_ShowString(9,3,"21V",YELLOW,BLACK,12,0);
+  267   3                LCD_ShowString(9,119,"16V",YELLOW,BLACK,12,0);                  
+  268   3            }
+  269   2            
+  270   2          //LCD_ShowString(9,3,"24V",YELLOW,BLACK,12,0);
+  271   2          //LCD_ShowString(9,119,"0V",YELLOW,BLACK,12,0);
+  272   2          if(C_Range.Current_Range_Flag_one== 1){         
+  273   3            //显示最小电压电流  
+  274   3            LCD_ShowString(213-12,3,"0.5A",BLUE,BLACK,12,0);
+  275   3            LCD_ShowString(213,119,"0A",BLUE,BLACK,12,0);                   
+  276   3          }
+  277   2          if(C_Range.Current_Range_Flag_tow== 1){         
+  278   3                  //显示最小电压电流  
+  279   3                  LCD_ShowString(213,3,"1A",BLUE,BLACK,12,0);
+  280   3                  LCD_ShowString(213,119,"0A",BLUE,BLACK,12,0);                   
+  281   3          }
+  282   2          if(C_Range.Current_Range_Flag_five== 1){          
+  283   3                  //显示最小电压电流  
+  284   3                  LCD_ShowString(213-12,3,"1.5A",BLUE,BLACK,12,0);
+  285   3                  LCD_ShowString(213,119,"0A",BLUE,BLACK,12,0);                   
+  286   3          }
+  287   2          if(C_Range.Current_Range_Flag_six== 1){         
+  288   3                  //显示最小电压电流  
+  289   3                  LCD_ShowString(213,3,"2A",BLUE,BLACK,12,0);
+  290   3                  LCD_ShowString(213,119,"0A",BLUE,BLACK,12,0);                   
+  291   3          }
+  292   2          if(C_Range.Current_Range_Flag_seven== 1){         
+  293   3                  //显示最小电压电流  
+  294   3                  LCD_ShowString(213-12,3,"2.5A",BLUE,BLACK,12,0);
+  295   3                  LCD_ShowString(213,119,"0A",BLUE,BLACK,12,0);                   
+  296   3          }
+  297   2          if(C_Range.Current_Range_Flag_eight== 1){         
+  298   3                  //显示最小电压电流  
+  299   3                  LCD_ShowString(213,3,"3A",BLUE,BLACK,12,0);
+  300   3                  LCD_ShowString(213,119,"0A",BLUE,BLACK,12,0);                   
+  301   3          }
+  302   2          if(C_Range.Current_Range_Flag_nine== 1){          
+  303   3                  //显示最小电压电流  
+  304   3                  LCD_ShowString(213-12,3,"3.5A",BLUE,BLACK,12,0);
+  305   3                  LCD_ShowString(213,119,"0A",BLUE,BLACK,12,0);                   
+  306   3          }
+  307   2          if(C_Range.Current_Range_Flag_ten== 1){         
+  308   3                  //显示最小电压电流  
+  309   3                  LCD_ShowString(213,3,"4A",BLUE,BLACK,12,0);
+  310   3                  LCD_ShowString(213,119,"0A",BLUE,BLACK,12,0);                   
+  311   3          }   
+  312   2          if(C_Range.Current_Range_Flag_three== 1){         
+  313   3                  //显示最小电压电流  
+  314   3                  LCD_ShowString(213,3,"5A",BLUE,BLACK,12,0);
+  315   3                  LCD_ShowString(213,119,"0A",BLUE,BLACK,12,0);                   
+  316   3          }
+  317   2          if(C_Range.Current_Range_Flag_four== 1){          
+  318   3                  //显示最小电压电流  
+  319   3                  LCD_ShowString(213,3,"5A",BLUE,BLACK,12,0);
+C251 COMPILER V5.60.0,  KEY                                                                24/02/23  15:43:51  PAGE 6   
+
+  320   3                  LCD_ShowString(213,119,"0A",BLUE,BLACK,12,0);                   
+  321   3          } 
+  322   2          
+  323   2          if(Begin_Stop_Flag==0){
+  324   3            LCD_Fill(161,121,175,135,BLACK);
+  325   3            LCD_ShowPicture(162,122,6,12,gImage_stop);
+  326   3          }else if(Begin_Stop_Flag==1){
+  327   3            LCD_Fill(161,121,175,135,BLACK);
+  328   3            LCD_ShowPicture(162,122,6,12,gImage_Begin);
+  329   3          }     
+  330   2        }
+  331   1        
+  332   1      }
+  333          
+  334          /*-------------------------------------------------------------
+  335          *功能：单次显示电压差曲线的电压电流量程
+  336          *作者：小夏
+  337          *修改时间：2023.2.24
+  338          *参考：（大脑）自己
+  339          *-------------------------------------------------------------*/
+  340          void Display_main_Line_Voltage(void){
+  341   1        if(index_cp==9){
+  342   2          menu_Ui_main_Line_Wen(BRRED);
+  343   2          //显示最大电压最小电压
+  344   2          ADC_GET_V_X=10;
+  345   2          ADC_GET_V_Y=80;
+  346   2          LCD_ShowString(120,121,"200us",GREEN,BLACK,12,0);
+  347   2          LCD_ShowString(180,3,"Ripple",GREEN,BLACK,12,0); 
+  348   2          LCD_DrawRectangle(155, 17, 235, 117,GREEN);   
+  349   2         if(Voltage_range_Flag==1){
+  350   3            LCD_ShowString(9,3,"+0.05V",YELLOW,BLACK,12,0);
+  351   3            LCD_ShowString(9,119,"-0.05V",YELLOW,BLACK,12,0);
+  352   3         }          
+  353   2         if(Voltage_range_Flag_Tow==1){
+  354   3            LCD_ShowString(9,3,"+0.1V",YELLOW,BLACK,12,0);
+  355   3            LCD_ShowString(9,119,"-0.1V",YELLOW,BLACK,12,0);
+  356   3         }
+  357   2         if(Voltage_range_Flag_Three==1){
+  358   3            LCD_ShowString(9,3,"+1V",YELLOW,BLACK,12,0);
+  359   3            LCD_ShowString(9,119,"-1V",YELLOW,BLACK,12,0);
+  360   3         }
+  361   2          if(Begin_Stop_Flag==0){
+  362   3            LCD_Fill(161,121,175,135,BLACK);
+  363   3            LCD_ShowPicture(162,122,6,12,gImage_stop);
+  364   3          }else if(Begin_Stop_Flag==1){
+  365   3            LCD_Fill(161,121,175,135,BLACK);
+  366   3            LCD_ShowPicture(162,122,6,12,gImage_Begin);
+  367   3          }
+  368   2        } 
+  369   1      }
+  370          /*-------------------------------------------------------------
+  371          *功能：修改离线曲线的延时
+  372          *作者：小夏
+  373          *修改时间：2023.2.24
+  374          *参考：（大脑）自己
+  375          *-------------------------------------------------------------*/
+  376          void Change_Timer_Time(void){
+  377   1      
+  378   1          if(index_cp==8){
+  379   2            nember_Flag++;
+  380   2            if(nember_Flag>=9){
+  381   3              nember_Flag=0;
+  382   3            } 
+  383   2         if(nember_Flag==0){
+  384   3           time=0;
+  385   3           Change_Time=60000;
+C251 COMPILER V5.60.0,  KEY                                                                24/02/23  15:43:51  PAGE 7   
+
+  386   3           Time_Change_FLAG=0;
+  387   3         }
+  388   2         if(nember_Flag==1){
+  389   3          time =0;
+  390   3          Change_Time=30000;   
+  391   3           Time_Change_FLAG=1;     
+  392   3         }
+  393   2         if(nember_Flag==2){
+  394   3          time =0;
+  395   3          Change_Time=10000;   
+  396   3          Time_Change_FLAG=2;    
+  397   3         }
+  398   2         if(nember_Flag==3){
+  399   3          time =0;
+  400   3          Change_Time=1000;  
+  401   3          Time_Change_FLAG=3;    
+  402   3         }
+  403   2         if(nember_Flag==4){
+  404   3          time =0;
+  405   3          Change_Time=500;   
+  406   3           Time_Change_FLAG=4;     
+  407   3         }
+  408   2         if(nember_Flag==5){
+  409   3          time =0;
+  410   3          Change_Time=100;   
+  411   3          Time_Change_FLAG=5;    
+  412   3         }
+  413   2         if(nember_Flag==6){
+  414   3          time =0;
+  415   3          Change_Time=50;  
+  416   3          Time_Change_FLAG=6;    
+  417   3         }
+  418   2         if(nember_Flag==7){
+  419   3          time =0;
+  420   3          Change_Time=20;  
+  421   3          Time_Change_FLAG=7;    
+  422   3         }
+  423   2         if(nember_Flag==8){
+  424   3          time =0;
+  425   3          Change_Time=1;   
+  426   3          Time_Change_FLAG=8;    
+  427   3         }
+  428   2         
+  429   2       }   
+  430   1      }
+  431          
+  432          /*-------------------------------------------------------------
+  433          *功能：离线曲线的暂停
+  434          *作者：小夏
+  435          *修改时间：2023.2.24
+  436          *参考：（大脑）自己
+  437          *-------------------------------------------------------------*/
+  438          void Diaplay_Begin_Stop(u8 indexs){
+  439   1        if(index_cp==indexs){
+  440   2      
+  441   2          Begin_Stop_Flag+=1;
+  442   2          Delay_ms(250);
+  443   2          if(Begin_Stop_Flag>=2){
+  444   3            Begin_Stop_Flag =0;
+  445   3          }
+  446   2          if(Begin_Stop_Flag==0){
+  447   3            LCD_Fill(161,121,175,135,BLACK);
+  448   3            LCD_ShowPicture(162,122,6,12,gImage_stop);
+  449   3          }else if(Begin_Stop_Flag==1){
+  450   3            LCD_Fill(161,121,175,135,BLACK);
+  451   3            LCD_ShowPicture(162,122,6,12,gImage_Begin);
+C251 COMPILER V5.60.0,  KEY                                                                24/02/23  15:43:51  PAGE 8   
+
+  452   3          }     
+  453   2        }
+  454   1        if(index_cp==indexs){
+  455   2          
+  456   2          Begin_Stop_Ri_Flag+=1;
+  457   2          Delay_ms(250);
+  458   2          if(Begin_Stop_Ri_Flag>=2){
+  459   3            Begin_Stop_Ri_Flag =0;
+  460   3          }
+  461   2          if(Begin_Stop_Ri_Flag==0){
+  462   3            LCD_Fill(161,121,175,135,BLACK);
+  463   3            LCD_ShowPicture(162,122,6,12,gImage_stop);
+  464   3          }else if(Begin_Stop_Ri_Flag==1){
+  465   3            LCD_Fill(161,121,175,135,BLACK);
+  466   3            LCD_ShowPicture(162,122,6,12,gImage_Begin);
+  467   3          }   
+  468   2        } 
+  469   1      }
+  470          
+  471          
+  472          /*-------------------------------------------------------------
+  473          *功能：电流，温度保护框图
+  474          *作者：小夏
+  475          *修改时间：2023.2.24
+  476          *参考：（大脑）自己
+  477          *-------------------------------------------------------------*/
+  478          void Current_Temp_Ui(){
+  479   1       if(index_cp==10){
+  480   2          //加电流减电流UI
+  481   2          LCD_Fill(186, 74, 186+44, 74+13,BLACK);   
+  482   2          LCD_DrawRectangle(11, 74,11+44,74+13,YELLOW);
+  483   2          LCD_ShowString(12+4,75,"+100mA",GREEN,GREEN_NOW,12,0);
+  484   2          LCD_DrawRectangle(65, 74, 65+44, 74+13,YELLOW);
+  485   2          LCD_ShowString(66+4,75,"-100mA",RED_NOW,BLACK,12,0);  
+  486   2          //加温度减温度UI    
+  487   2          LCD_DrawRectangle(134,74,134+44,74+13,YELLOW);
+  488   2          LCD_ShowString(134+12,75,"+1C",GREEN,BLACK,12,0);
+  489   2          LCD_DrawRectangle(186, 74, 186+44, 74+13,YELLOW);
+  490   2          LCD_ShowString(186+12,75,"-1C",RED_NOW,BLACK,12,0);     
+  491   2          
+  492   2          LCD_DrawRectangle(1, 1, 239, 134,GREEN);
+  493   2          LCD_DrawLine(120,0,120,135,GREEN);
+  494   2          LCD_DrawLine(0,37,240,37,GREEN);
+  495   2          LCD_DrawRectangle(1, 1, 239, 134,GREEN);     
+  496   2       }
+  497   1        if(index_cp==11){
+  498   2          //加电流减电流UI
+  499   2          LCD_Fill(11, 74,11+44,74+13,BLACK);
+  500   2          LCD_DrawRectangle(11, 74,11+44,74+13,YELLOW);
+  501   2          LCD_ShowString(12+4,75,"+100mA",GREEN,BLACK,12,0);
+  502   2          LCD_DrawRectangle(65, 74, 65+44, 74+13,YELLOW);
+  503   2          LCD_ShowString(66+4,75,"-100mA",RED_NOW,GREEN_NOW,12,0);  
+  504   2          //加温度减温度UI    
+  505   2          LCD_DrawRectangle(134,74,134+44,74+13,YELLOW);
+  506   2          LCD_ShowString(134+12,75,"+1C",GREEN,BLACK,12,0);
+  507   2          LCD_DrawRectangle(186, 74, 186+44, 74+13,YELLOW);
+  508   2          LCD_ShowString(186+12,75,"-1C",RED_NOW,BLACK,12,0);     
+  509   2          
+  510   2          LCD_DrawRectangle(1, 1, 239, 134,GREEN);
+  511   2          LCD_DrawLine(120,0,120,135,GREEN);
+  512   2          LCD_DrawLine(0,37,240,37,GREEN);
+  513   2          LCD_DrawRectangle(1, 1, 239, 134,GREEN);     
+  514   2       }
+  515   1          if(index_cp==12){
+  516   2          LCD_Fill(65, 74, 65+44, 74+13,BLACK);
+  517   2          //加电流减电流UI
+C251 COMPILER V5.60.0,  KEY                                                                24/02/23  15:43:51  PAGE 9   
+
+  518   2          LCD_DrawRectangle(11, 74,11+44,74+13,YELLOW);
+  519   2          LCD_ShowString(12+4,75,"+100mA",GREEN,BLACK,12,0);
+  520   2          LCD_DrawRectangle(65, 74, 65+44, 74+13,YELLOW);
+  521   2          LCD_ShowString(66+4,75,"-100mA",RED_NOW,BLACK,12,0);  
+  522   2          //加温度减温度UI    
+  523   2          LCD_DrawRectangle(134,74,134+44,74+13,YELLOW);
+  524   2          LCD_ShowString(134+12,75,"+1C",GREEN,GREEN_NOW,12,0);
+  525   2          LCD_DrawRectangle(186, 74, 186+44, 74+13,YELLOW);
+  526   2          LCD_ShowString(186+12,75,"-1C",RED_NOW,BLACK,12,0);     
+  527   2          
+  528   2          LCD_DrawRectangle(1, 1, 239, 134,GREEN);
+  529   2          LCD_DrawLine(120,0,120,135,GREEN);
+  530   2          LCD_DrawLine(0,37,240,37,GREEN);
+  531   2          LCD_DrawRectangle(1, 1, 239, 134,GREEN);     
+  532   2       }
+  533   1        if(index_cp==13){
+  534   2          LCD_Fill(134,74,134+44,74+13,BLACK);
+  535   2          //加电流减电流UI
+  536   2          LCD_DrawRectangle(11, 74,11+44,74+13,YELLOW);
+  537   2          LCD_ShowString(12+4,75,"+100mA",GREEN,BLACK,12,0);
+  538   2          LCD_DrawRectangle(65, 74, 65+44, 74+13,YELLOW);
+  539   2          LCD_ShowString(66+4,75,"-100mA",RED_NOW,BLACK,12,0);  
+  540   2          //加温度减温度UI    
+  541   2          LCD_DrawRectangle(134,74,134+44,74+13,YELLOW);
+  542   2          LCD_ShowString(134+12,75,"+1C",GREEN,BLACK,12,0);
+  543   2          LCD_DrawRectangle(186, 74, 186+44, 74+13,YELLOW);
+  544   2          LCD_ShowString(186+12,75,"-1C",RED_NOW,GREEN_NOW,12,0);     
+  545   2          
+  546   2          LCD_DrawRectangle(1, 1, 239, 134,GREEN);
+  547   2          LCD_DrawLine(120,0,120,135,GREEN);
+  548   2          LCD_DrawLine(0,37,240,37,GREEN);
+  549   2          LCD_DrawRectangle(1, 1, 239, 134,GREEN);     
+  550   2       }
+  551   1      }
+  552          /*-------------------------------------------------------------
+  553          *功能：电流温度加减按键及进行加的算法
+  554          *作者：小夏
+  555          *修改时间：2023.2.24
+  556          *参考：（大脑）自己
+  557          *-------------------------------------------------------------*/
+  558          void Current_Temp_add(void){
+  559   1        if(index_cp==10){
+  560   2          C_T_P.protect_Current+=0.1;
+  561   2          if(C_T_P.protect_Current>=5) C_T_P.protect_Current=5;
+  562   2        }
+  563   1        if(index_cp==11){
+  564   2          C_T_P.protect_Current-=0.1;
+  565   2          if(C_T_P.protect_Current<=0) C_T_P.protect_Current=0;
+  566   2        } 
+  567   1        if(index_cp==12){ 
+  568   2          C_T_P.protect_Temp++;   
+  569   2          if(C_T_P.protect_Temp>=99)C_T_P.protect_Temp=99;
+  570   2        }
+  571   1        if(index_cp==13){ 
+  572   2          C_T_P.protect_Temp--;   
+  573   2          if(C_T_P.protect_Temp<=0)C_T_P.protect_Temp=0;
+  574   2        } 
+  575   1      }
+  576          /*-------------------------------------------------------------
+  577          *功能：电流温度设置成果显示
+  578          *作者：小夏
+  579          *修改时间：2023.2.24
+  580          *参考：（大脑）自己
+  581          *-------------------------------------------------------------*/
+  582          void Current_Temp_Set_succeed(void){
+  583   1      if(index_cp==10){
+C251 COMPILER V5.60.0,  KEY                                                                24/02/23  15:43:51  PAGE 10  
+
+  584   2          LCD_Fill(70,40,176,92,RED_NOW); 
+  585   2          LCD_ShowString(78,50,"SUCCEED",WHITE,RED_NOW,24,0);
+  586   2          Delay_ms(1000);
+  587   2        }
+  588   1        if(index_cp==11){
+  589   2          LCD_Fill(70,40,176,92,RED_NOW); 
+  590   2          LCD_ShowString(78,50,"SUCCEED",WHITE,RED_NOW,24,0); 
+  591   2          Delay_ms(1000);
+  592   2        } 
+  593   1        if(index_cp==12){ 
+  594   2          LCD_Fill(70,40,176,92,RED_NOW); 
+  595   2          LCD_ShowString(78,50,"SUCCEED",WHITE,RED_NOW,24,0); 
+  596   2          Delay_ms(1000);
+  597   2        }
+  598   1        if(index_cp==13){ 
+  599   2          LCD_Fill(70,40,176,92,RED_NOW); 
+  600   2          LCD_ShowString(78,50,"SUCCEED",WHITE,RED_NOW,24,0); 
+  601   2          Delay_ms(1000);
+  602   2        }   
+  603   1        
+  604   1      }
+  605          
+  606          
+  607          /*-------------------------------------------------------------
+  608          *功能：PD快充协议框图
+  609          *作者：小夏
+  610          *修改时间：2023.2.24
+  611          *参考：（大脑）自己
+  612          *-------------------------------------------------------------*/
+  613          static void PD_Dislay_Ui(void){
+  614   1        
+  615   1        if(index_cp==14){
+  616   2          LCD_DrawRectangle(1, 1, 239, 134,GREEN);
+  617   2          LCD_DrawLine(0,16,240,16,GREEN);      
+  618   2          LCD_DrawLine(120,16,120,16+22,GREEN);
+  619   2          LCD_DrawLine(0,37,240,37,GREEN);
+  620   2          //2023.1.13更新   
+  621   2          LCD_ShowString(105,2,"PD3.0",WHITE,BLACK,12,0);
+  622   2          CH224K_PD_Voltage(OUTPUT_5V);   
+  623   2          if(PD_Power_FLAG ==0){
+  624   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN_NOW);
+  625   3          LCD_ShowString(22,54,"PD 9V 3A",YELLOW,BLACK,16,0);
+  626   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN_NOW); 
+  627   3          LCD_ShowString(128+4,54,"PD 12V 3A",YELLOW,BLACK,16,0);
+  628   3          LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN_NOW);
+  629   3          LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  630   3          LCD_DrawRectangle(119, 91, 119+109,91+19,GREEN_NOW);
+  631   3          LCD_ShowString(123,92,"PD 20V 3.25A",YELLOW,BLACK,16,0);        
+  632   3          }
+  633   2          if(PD_Power_FLAG ==1){
+  634   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  635   3          LCD_ShowString(22,54,"PD 9V 3A",YELLOW,BLACK,16,0);
+  636   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN); 
+  637   3          LCD_ShowString(128+4,54,"PD 12V 3A",YELLOW,BLACK,16,0);
+  638   3          LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN_NOW);
+  639   3          LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  640   3          LCD_DrawRectangle(119, 91, 119+109,91+19,GREEN_NOW);
+  641   3          LCD_ShowString(123,92,"PD 20V 3.25A",YELLOW,BLACK,16,0);      
+  642   3          }
+  643   2          if(PD_Power_FLAG ==2){
+  644   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  645   3          LCD_ShowString(22,54,"PD 9V 3A",YELLOW,BLACK,16,0);
+  646   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN_NOW); 
+  647   3          LCD_ShowString(128+4,54,"PD 12V 3A",YELLOW,BLACK,16,0);
+  648   3          LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN);
+  649   3          LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+C251 COMPILER V5.60.0,  KEY                                                                24/02/23  15:43:51  PAGE 11  
+
+  650   3          LCD_DrawRectangle(119, 91, 119+109,91+19,GREEN);
+  651   3          LCD_ShowString(123,92,"PD 20V 3.25A",YELLOW,BLACK,16,0);      
+  652   3          }
+  653   2          if(PD_Power_FLAG ==3){
+  654   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  655   3          LCD_ShowString(22,54,"PD 9V 3A",YELLOW,BLACK,16,0);
+  656   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN); 
+  657   3          LCD_ShowString(128+4,54,"PD 12V 3A",YELLOW,BLACK,16,0);
+  658   3          LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN);
+  659   3          LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  660   3          LCD_DrawRectangle(119, 91, 119+109,91+19,GREEN);
+  661   3          LCD_ShowString(123,92,"PD 20V 3.25A",YELLOW,BLACK,16,0);            
+  662   3          }
+  663   2      
+  664   2          
+  665   2        }
+  666   1        if(index_cp==15){
+  667   2          LCD_Fill(124,92,119+108,91+18,BLACK);
+  668   2          LCD_DrawRectangle(1, 1, 239, 134,GREEN);
+  669   2          LCD_DrawLine(0,16,240,16,GREEN);      
+  670   2          LCD_DrawLine(120,16,120,16+22,GREEN);
+  671   2          LCD_DrawLine(0,37,240,37,GREEN); 
+  672   2          CH224K_PD_Voltage(OUTPUT_9V);       
+  673   2          //2023.1.13更新   
+  674   2          LCD_ShowString(105,2,"PD3.0",WHITE,BLACK,12,0);       
+  675   2          if(PD_Power_FLAG ==0){
+  676   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN_NOW);
+  677   3          LCD_ShowString(22,54,"PD 9V 3A",YELLOW,WHITE,16,0);
+  678   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN_NOW); 
+  679   3          LCD_ShowString(128+4,54,"PD 12V 3A",YELLOW,BLACK,16,0);
+  680   3          LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN_NOW);
+  681   3          LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  682   3          LCD_DrawRectangle(119, 91, 119+109,91+19,GREEN_NOW);
+  683   3          LCD_ShowString(123,92,"PD 20V 3.25A",YELLOW,BLACK,16,0);        
+  684   3          }
+  685   2          if(PD_Power_FLAG ==1){
+  686   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  687   3          LCD_ShowString(22,54,"PD 9V 3A",YELLOW,WHITE,16,0);
+  688   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN); 
+  689   3          LCD_ShowString(128+4,54,"PD 12V 3A",YELLOW,BLACK,16,0);
+  690   3          LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN_NOW);
+  691   3          LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  692   3          LCD_DrawRectangle(119, 91, 119+109,91+19,GREEN_NOW);
+  693   3          LCD_ShowString(123,92,"PD 20V 3.25A",YELLOW,BLACK,16,0);      
+  694   3          }
+  695   2          if(PD_Power_FLAG ==2){
+  696   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  697   3          LCD_ShowString(22,54,"PD 9V 3A",YELLOW,WHITE,16,0);
+  698   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN_NOW); 
+  699   3          LCD_ShowString(128+4,54,"PD 12V 3A",YELLOW,BLACK,16,0);
+  700   3          LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN);
+  701   3          LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  702   3          LCD_DrawRectangle(119, 91, 119+109,91+19,GREEN);
+  703   3          LCD_ShowString(123,92,"PD 20V 3.25A",YELLOW,BLACK,16,0);      
+  704   3          } 
+  705   2          if(PD_Power_FLAG ==3){
+  706   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  707   3          LCD_ShowString(22,54,"PD 9V 3A",YELLOW,WHITE,16,0);
+  708   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN); 
+  709   3          LCD_ShowString(128+4,54,"PD 12V 3A",YELLOW,BLACK,16,0);
+  710   3          LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN);
+  711   3          LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  712   3          LCD_DrawRectangle(119, 91, 119+109,91+19,GREEN);
+  713   3          LCD_ShowString(123,92,"PD 20V 3.25A",YELLOW,BLACK,16,0);            
+  714   3          }
+  715   2      
+C251 COMPILER V5.60.0,  KEY                                                                24/02/23  15:43:51  PAGE 12  
+
+  716   2        }   
+  717   1        if(index_cp==16){
+  718   2          CH224K_PD_Voltage(OUTPUT_12V);    
+  719   2          LCD_Fill(22,54,18+81,53+18,BLACK);    
+  720   2          LCD_DrawRectangle(1, 1, 239, 134,GREEN);
+  721   2          LCD_DrawLine(0,16,240,16,GREEN);      
+  722   2          LCD_DrawLine(120,16,120,16+22,GREEN);
+  723   2          LCD_DrawLine(0,37,240,37,GREEN);
+  724   2          //2023.1.13更新   
+  725   2          LCD_ShowString(105,2,"PD3.0",WHITE,BLACK,12,0);       
+  726   2          if(PD_Power_FLAG ==0){
+  727   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN_NOW);
+  728   3          LCD_ShowString(22,54,"PD 9V 3A",YELLOW,BLACK,16,0);
+  729   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN_NOW); 
+  730   3          LCD_ShowString(128+4,54,"PD 12V 3A",YELLOW,WHITE,16,0);
+  731   3          LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN_NOW);
+  732   3          LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  733   3          LCD_DrawRectangle(119, 91, 119+109,91+19,GREEN_NOW);
+  734   3          LCD_ShowString(123,92,"PD 20V 3.25A",YELLOW,BLACK,16,0);        
+  735   3          }
+  736   2          if(PD_Power_FLAG ==1){
+  737   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  738   3          LCD_ShowString(22,54,"PD 9V 3A",YELLOW,BLACK,16,0);
+  739   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN); 
+  740   3          LCD_ShowString(128+4,54,"PD 12V 3A",YELLOW,WHITE,16,0);
+  741   3          LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN_NOW);
+  742   3          LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  743   3          LCD_DrawRectangle(119, 91, 119+109,91+19,GREEN_NOW);
+  744   3          LCD_ShowString(123,92,"PD 20V 3.25A",YELLOW,BLACK,16,0);      
+  745   3          }
+  746   2          if(PD_Power_FLAG ==2){
+  747   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  748   3          LCD_ShowString(22,54,"PD 9V 3A",YELLOW,BLACK,16,0);
+  749   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN_NOW); 
+  750   3          LCD_ShowString(128+4,54,"PD 12V 3A",YELLOW,WHITE,16,0);
+  751   3          LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN);
+  752   3          LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  753   3          LCD_DrawRectangle(119, 91, 119+109,91+19,GREEN);
+  754   3          LCD_ShowString(123,92,"PD 20V 3.25A",YELLOW,BLACK,16,0);      
+  755   3          }
+  756   2          if(PD_Power_FLAG ==3){
+  757   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  758   3          LCD_ShowString(22,54,"PD 9V 3A",YELLOW,BLACK,16,0);
+  759   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN); 
+  760   3          LCD_ShowString(128+4,54,"PD 12V 3A",YELLOW,WHITE,16,0);
+  761   3          LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN);
+  762   3          LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  763   3          LCD_DrawRectangle(119, 91, 119+109,91+19,GREEN);
+  764   3          LCD_ShowString(123,92,"PD 20V 3.25A",YELLOW,BLACK,16,0);            
+  765   3          }
+  766   2        }     
+  767   1        if(index_cp==17){
+  768   2              CH224K_PD_Voltage(OUTPUT_15V);    
+  769   2          LCD_Fill(128+4,54,128+87,53+18,BLACK);  
+  770   2          LCD_DrawRectangle(1, 1, 239, 134,GREEN);
+  771   2          LCD_DrawLine(0,16,240,16,GREEN);      
+  772   2          LCD_DrawLine(120,16,120,16+22,GREEN);
+  773   2          LCD_DrawLine(0,37,240,37,GREEN);  
+  774   2          LCD_ShowString(105,2,"PD3.0",WHITE,BLACK,12,0);       
+  775   2          if(PD_Power_FLAG ==0){
+  776   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN_NOW);
+  777   3          LCD_ShowString(22,54,"PD 9V 3A",YELLOW,BLACK,16,0);
+  778   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN_NOW); 
+  779   3          LCD_ShowString(128+4,54,"PD 12V 3A",YELLOW,BLACK,16,0);
+  780   3          LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN_NOW);
+  781   3          LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,WHITE,16,0);
+C251 COMPILER V5.60.0,  KEY                                                                24/02/23  15:43:51  PAGE 13  
+
+  782   3          LCD_DrawRectangle(119, 91, 119+109,91+19,GREEN_NOW);
+  783   3          LCD_ShowString(123,92,"PD 20V 3.25A",YELLOW,BLACK,16,0);        
+  784   3          }
+  785   2          if(PD_Power_FLAG ==1){
+  786   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  787   3          LCD_ShowString(22,54,"PD 9V 3A",YELLOW,BLACK,16,0);
+  788   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN); 
+  789   3          LCD_ShowString(128+4,54,"PD 12V 3A",YELLOW,BLACK,16,0);
+  790   3          LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN_NOW);
+  791   3          LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,WHITE,16,0);
+  792   3          LCD_DrawRectangle(119, 91, 119+109,91+19,GREEN_NOW);
+  793   3          LCD_ShowString(123,92,"PD 20V 3.25A",YELLOW,BLACK,16,0);      
+  794   3          }
+  795   2          if(PD_Power_FLAG ==2){
+  796   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  797   3          LCD_ShowString(22,54,"PD 9V 3A",YELLOW,BLACK,16,0);
+  798   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN_NOW); 
+  799   3          LCD_ShowString(128+4,54,"PD 12V 3A",YELLOW,BLACK,16,0);
+  800   3          LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN);
+  801   3          LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,WHITE,16,0);
+  802   3          LCD_DrawRectangle(119, 91, 119+109,91+19,GREEN);
+  803   3          LCD_ShowString(123,92,"PD 20V 3.25A",YELLOW,BLACK,16,0);      
+  804   3          }
+  805   2          if(PD_Power_FLAG ==3){
+  806   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  807   3          LCD_ShowString(22,54,"PD 9V 3A",YELLOW,BLACK,16,0);
+  808   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN); 
+  809   3          LCD_ShowString(128+4,54,"PD 12V 3A",YELLOW,BLACK,16,0);
+  810   3          LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN);
+  811   3          LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,WHITE,16,0);
+  812   3          LCD_DrawRectangle(119, 91, 119+109,91+19,GREEN);
+  813   3          LCD_ShowString(123,92,"PD 20V 3.25A",YELLOW,BLACK,16,0);            
+  814   3          }   
+  815   2        } 
+  816   1        if(index_cp==18){
+  817   2              CH224K_PD_Voltage(OUTPUT_20V);    
+  818   2          LCD_Fill(14+4,92,14+89,91+18,BLACK);
+  819   2          LCD_DrawRectangle(1, 1, 239, 134,GREEN);
+  820   2          LCD_DrawLine(0,16,240,16,GREEN);      
+  821   2          LCD_DrawLine(120,16,120,16+22,GREEN);
+  822   2          LCD_DrawLine(0,37,240,37,GREEN);  
+  823   2          LCD_ShowString(105,2,"PD3.0",WHITE,BLACK,12,0);       
+  824   2          if(PD_Power_FLAG ==0){
+  825   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN_NOW);
+  826   3          LCD_ShowString(22,54,"PD 9V 3A",YELLOW,BLACK,16,0);
+  827   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN_NOW); 
+  828   3          LCD_ShowString(128+4,54,"PD 12V 3A",YELLOW,BLACK,16,0);
+  829   3          LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN_NOW);
+  830   3          LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  831   3          LCD_DrawRectangle(119, 91, 119+109,91+19,GREEN_NOW);
+  832   3          LCD_ShowString(123,92,"PD 20V 3.25A",YELLOW,WHITE,16,0);        
+  833   3          }
+  834   2          if(PD_Power_FLAG ==1){
+  835   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  836   3          LCD_ShowString(22,54,"PD 9V 3A",YELLOW,BLACK,16,0);
+  837   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN); 
+  838   3          LCD_ShowString(128+4,54,"PD 12V 3A",YELLOW,BLACK,16,0);
+  839   3          LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN_NOW);
+  840   3          LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  841   3          LCD_DrawRectangle(119, 91, 119+109,91+19,GREEN_NOW);
+  842   3          LCD_ShowString(123,92,"PD 20V 3.25A",YELLOW,WHITE,16,0);      
+  843   3          }
+  844   2          if(PD_Power_FLAG ==2){
+  845   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  846   3          LCD_ShowString(22,54,"PD 9V 3A",YELLOW,BLACK,16,0);
+  847   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN_NOW); 
+C251 COMPILER V5.60.0,  KEY                                                                24/02/23  15:43:51  PAGE 14  
+
+  848   3          LCD_ShowString(128+4,54,"PD 12V 3A",YELLOW,BLACK,16,0);
+  849   3          LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN);
+  850   3          LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  851   3          LCD_DrawRectangle(119, 91, 119+109,91+19,GREEN);
+  852   3          LCD_ShowString(123,92,"PD 20V 3.25A",YELLOW,WHITE,16,0);      
+  853   3          }
+  854   2          if(PD_Power_FLAG ==3){
+  855   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  856   3          LCD_ShowString(22,54,"PD 9V 3A",YELLOW,BLACK,16,0);
+  857   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN); 
+  858   3          LCD_ShowString(128+4,54,"PD 12V 3A",YELLOW,BLACK,16,0);
+  859   3          LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN);
+  860   3          LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  861   3          LCD_DrawRectangle(119, 91, 119+109,91+19,GREEN);
+  862   3          LCD_ShowString(123,92,"PD 20V 3.25A",YELLOW,WHITE,16,0);            
+  863   3          }
+  864   2        }
+  865   1      }/*-------------------------------------------------------------
+  866          *功能：QC快充协议框图
+  867          *作者：小夏
+  868          *修改时间：2023.2.24
+  869          *参考：（大脑）自己
+  870          *-------------------------------------------------------------*/
+  871          static void QC_Dislay_Ui(void){
+  872   1        
+  873   1        if(index_cp==19){
+  874   2          LCD_Fill(14, 91, 14+102,91+19,BLACK); 
+  875   2          LCD_DrawRectangle(1, 1, 239, 134,GREEN);
+  876   2          LCD_DrawLine(0,16,240,16,GREEN);      
+  877   2          LCD_DrawLine(120,16,120,16+22,GREEN);
+  878   2          LCD_DrawLine(0,37,240,37,GREEN);  
+  879   2          LCD_ShowString(105,2,"QC2.0",WHITE,BLACK,12,0);
+  880   2          LCD_DrawRectangle(130, 80, 239, 134,GREEN);   
+  881   2          CH224K_PD_Voltage(OUTPUT_5V); 
+  882   2          if(QC_Power_FLAG ==0){
+  883   3          
+  884   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN_NOW);
+  885   3          LCD_ShowString(22,54,"QC 9V 3A",YELLOW,BLACK,16,0);
+  886   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN_NOW); 
+  887   3          LCD_ShowString(128+4,54,"QC 12V 3A",YELLOW,BLACK,16,0);
+  888   3          //LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN_NOW);
+  889   3          //LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  890   3          LCD_DrawRectangle(14, 91, 14+102,91+19,GREEN_NOW);
+  891   3          LCD_ShowString(14+4,92,"QC 20V 3.25A",YELLOW,BLACK,16,0);         
+  892   3          }
+  893   2          if(QC_Power_FLAG ==1){
+  894   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  895   3          LCD_ShowString(22,54,"QC 9V 3A",YELLOW,BLACK,16,0);
+  896   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN); 
+  897   3          LCD_ShowString(128+4,54,"QC 12V 3A",YELLOW,BLACK,16,0);
+  898   3          //LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN_NOW);
+  899   3          //LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  900   3          LCD_DrawRectangle(14, 91, 14+102,91+19,GREEN_NOW);
+  901   3          LCD_ShowString(14+4,92,"QC 20V 3.25A",YELLOW,BLACK,16,0);         
+  902   3          }
+  903   2          if(QC_Power_FLAG ==2){
+  904   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  905   3          LCD_ShowString(22,54,"QC 9V 3A",YELLOW,BLACK,16,0);
+  906   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN_NOW); 
+  907   3          LCD_ShowString(128+4,54,"QC 12V 3A",YELLOW,BLACK,16,0);
+  908   3          //LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN);
+  909   3          //LCD_ShowString(14+4,92,"QC 15V 3A",YELLOW,BLACK,16,0);
+  910   3          LCD_DrawRectangle(14, 91, 14+102,91+19,GREEN_NOW);
+  911   3          LCD_ShowString(14+4,92,"QC 20V 3.25A",YELLOW,BLACK,16,0);       
+  912   3          }
+  913   2        }
+C251 COMPILER V5.60.0,  KEY                                                                24/02/23  15:43:51  PAGE 15  
+
+  914   1        if(index_cp==20){  //QC 9V
+  915   2          CH224K_PD_Voltage(OUTPUT_9V);   
+  916   2          LCD_DrawRectangle(1, 1, 239, 134,GREEN);
+  917   2          LCD_DrawLine(0,16,240,16,GREEN);      
+  918   2          LCD_DrawLine(120,16,120,16+22,GREEN);
+  919   2          LCD_DrawLine(0,37,240,37,GREEN);  
+  920   2          LCD_ShowString(105,2,"QC2.0",WHITE,BLACK,12,0);
+  921   2              LCD_DrawRectangle(130, 80, 239, 134,GREEN);
+  922   2          if(QC_Power_FLAG ==0){
+  923   3          
+  924   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN_NOW);
+  925   3          LCD_ShowString(22,54,"QC 9V 3A",YELLOW,WHITE,16,0);
+  926   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN_NOW); 
+  927   3          LCD_ShowString(128+4,54,"QC 12V 3A",YELLOW,BLACK,16,0);
+  928   3          //LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN_NOW);
+  929   3          //LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  930   3          LCD_DrawRectangle(14, 91, 14+102,91+19,GREEN_NOW);
+  931   3          LCD_ShowString(14+4,92,"QC 20V 3.25A",YELLOW,BLACK,16,0);         
+  932   3          }
+  933   2          if(QC_Power_FLAG ==1){
+  934   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  935   3          LCD_ShowString(22,54,"QC 9V 3A",YELLOW,WHITE,16,0);
+  936   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN); 
+  937   3          LCD_ShowString(128+4,54,"QC 12V 3A",YELLOW,BLACK,16,0);
+  938   3          //LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN_NOW);
+  939   3          //LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  940   3          LCD_DrawRectangle(14, 91, 14+102,91+19,GREEN_NOW);
+  941   3          LCD_ShowString(14+4,92,"QC 20V 3.25A",YELLOW,BLACK,16,0);         
+  942   3          }
+  943   2          if(QC_Power_FLAG ==2){
+  944   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  945   3          LCD_ShowString(22,54,"QC 9V 3A",YELLOW,WHITE,16,0);
+  946   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN_NOW); 
+  947   3          LCD_ShowString(128+4,54,"QC 12V 3A",YELLOW,BLACK,16,0);
+  948   3          //LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN);
+  949   3          //LCD_ShowString(14+4,92,"QC 15V 3A",YELLOW,BLACK,16,0);
+  950   3          LCD_DrawRectangle(14, 91, 14+102,91+19,GREEN_NOW);
+  951   3          LCD_ShowString(14+4,92,"QC 20V 3.25A",YELLOW,BLACK,16,0);       
+  952   3          }
+  953   2        }
+  954   1        if(index_cp==21){ //QC 12V
+  955   2          LCD_Fill(18, 53, 18+82,53+19,BLACK);  
+  956   2          LCD_DrawRectangle(1, 1, 239, 134,GREEN);
+  957   2          LCD_DrawLine(0,16,240,16,GREEN);      
+  958   2          LCD_DrawLine(120,16,120,16+22,GREEN);
+  959   2          LCD_DrawLine(0,37,240,37,GREEN);  
+  960   2          LCD_ShowString(105,2,"QC2.0",WHITE,BLACK,12,0);
+  961   2              LCD_DrawRectangle(130, 80, 239, 134,GREEN);
+  962   2              CH224K_PD_Voltage(OUTPUT_12V);
+  963   2          if(QC_Power_FLAG ==0){
+  964   3          
+  965   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN_NOW);
+  966   3          LCD_ShowString(22,54,"QC 9V 3A",YELLOW,BLACK,16,0);
+  967   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN_NOW); 
+  968   3          LCD_ShowString(128+4,54,"QC 12V 3A",YELLOW,WHITE,16,0);
+  969   3          //LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN_NOW);
+  970   3          //LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  971   3          LCD_DrawRectangle(14, 91, 14+102,91+19,GREEN_NOW);
+  972   3          LCD_ShowString(14+4,92,"QC 20V 3.25A",YELLOW,BLACK,16,0);         
+  973   3          }
+  974   2          if(QC_Power_FLAG ==1){
+  975   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  976   3          LCD_ShowString(22,54,"QC 9V 3A",YELLOW,BLACK,16,0);
+  977   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN); 
+  978   3          LCD_ShowString(128+4,54,"QC 12V 3A",YELLOW,WHITE,16,0);
+  979   3          //LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN_NOW);
+C251 COMPILER V5.60.0,  KEY                                                                24/02/23  15:43:51  PAGE 16  
+
+  980   3          //LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+  981   3          LCD_DrawRectangle(14, 91, 14+102,91+19,GREEN_NOW);
+  982   3          LCD_ShowString(14+4,92,"QC 20V 3.25A",YELLOW,BLACK,16,0);         
+  983   3          }
+  984   2          if(QC_Power_FLAG ==2){
+  985   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+  986   3          LCD_ShowString(22,54,"QC 9V 3A",YELLOW,BLACK,16,0);
+  987   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN_NOW); 
+  988   3          LCD_ShowString(128+4,54,"QC 12V 3A",YELLOW,WHITE,16,0);
+  989   3          //LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN);
+  990   3          //LCD_ShowString(14+4,92,"QC 15V 3A",YELLOW,BLACK,16,0);
+  991   3          LCD_DrawRectangle(14, 91, 14+102,91+19,GREEN_NOW);
+  992   3          LCD_ShowString(14+4,92,"QC 20V 3.25A",YELLOW,BLACK,16,0);       
+  993   3          }
+  994   2        }
+  995   1        if(index_cp==22){
+  996   2          CH224K_PD_Voltage(OUTPUT_20V);    
+  997   2          LCD_Fill(128, 53, 128+88,53+19,BLACK);  
+  998   2          LCD_DrawRectangle(1, 1, 239, 134,GREEN);
+  999   2          LCD_DrawLine(0,16,240,16,GREEN);      
+ 1000   2          LCD_DrawLine(120,16,120,16+22,GREEN);
+ 1001   2          LCD_DrawLine(0,37,240,37,GREEN);  
+ 1002   2          LCD_ShowString(105,2,"QC2.0",WHITE,BLACK,12,0);
+ 1003   2              LCD_DrawRectangle(130, 80, 239, 134,GREEN);
+ 1004   2          if(QC_Power_FLAG ==0){
+ 1005   3          
+ 1006   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN_NOW);
+ 1007   3          LCD_ShowString(22,54,"QC 9V 3A",YELLOW,BLACK,16,0);
+ 1008   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN_NOW); 
+ 1009   3          LCD_ShowString(128+4,54,"QC 12V 3A",YELLOW,BLACK,16,0);
+ 1010   3          //LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN_NOW);
+ 1011   3          //LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+ 1012   3          LCD_DrawRectangle(14, 91, 14+102,91+19,GREEN_NOW);
+ 1013   3          LCD_ShowString(14+4,92,"QC 20V 3.25A",YELLOW,WHITE,16,0);         
+ 1014   3          }
+ 1015   2          if(QC_Power_FLAG ==1){
+ 1016   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+ 1017   3          LCD_ShowString(22,54,"QC 9V 3A",YELLOW,BLACK,16,0);
+ 1018   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN); 
+ 1019   3          LCD_ShowString(128+4,54,"QC 12V 3A",YELLOW,BLACK,16,0);
+ 1020   3          //LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN_NOW);
+ 1021   3          //LCD_ShowString(14+4,92,"PD 15V 3A",YELLOW,BLACK,16,0);
+ 1022   3          LCD_DrawRectangle(14, 91, 14+102,91+19,GREEN_NOW);
+ 1023   3          LCD_ShowString(14+4,92,"QC 20V 3.25A",YELLOW,WHITE,16,0);         
+ 1024   3          }
+ 1025   2          if(QC_Power_FLAG ==2){
+ 1026   3          LCD_DrawRectangle(18, 53, 18+82,53+19,GREEN);
+ 1027   3          LCD_ShowString(22,54,"QC 9V 3A",YELLOW,BLACK,16,0);
+ 1028   3          LCD_DrawRectangle(128, 53, 128+88,53+19,GREEN_NOW); 
+ 1029   3          LCD_ShowString(128+4,54,"QC 12V 3A",YELLOW,BLACK,16,0);
+ 1030   3          //LCD_DrawRectangle(14, 91, 14+90,91+19,GREEN);
+ 1031   3          //LCD_ShowString(14+4,92,"QC 15V 3A",YELLOW,BLACK,16,0);
+ 1032   3          LCD_DrawRectangle(14, 91, 14+102,91+19,GREEN_NOW);
+ 1033   3          LCD_ShowString(14+4,92,"QC 20V 3.25A",YELLOW,WHITE,16,0);       
+ 1034   3          }
+ 1035   2        } 
+ 1036   1      }
+ 1037          /*-------------------------------------------------------------
+ 1038          *功能：5V输出设置框图
+ 1039          *作者：小夏
+ 1040          *修改时间：2023.2.24
+ 1041          *参考：（大脑）自己
+ 1042          *-------------------------------------------------------------*/
+ 1043          static void Voltage_OUTPUT_5V_Succeed(void){
+ 1044   1        if(index_cp==7){
+ 1045   2          CH224K_PD_Voltage(OUTPUT_5V);
+C251 COMPILER V5.60.0,  KEY                                                                24/02/23  15:43:51  PAGE 17  
+
+ 1046   2          LCD_ShowString(78,50,"SUCCEED",WHITE,RED_NOW,24,0); 
+ 1047   2          Delay_ms(1000);   
+ 1048   2        }
+ 1049   1      }
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =     15906     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =        10     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =       525     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,131 @@
+C251 COMPILER V5.60.0,  CH224K                                                             24/02/23  15:43:51  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE CH224K
+OBJECT MODULE PLACED IN .\Objects\CH224K.obj
+COMPILER INVOKED BY: D:\keil\C251\BIN\C251.EXE CH224K\CH224K.c XSMALL BROWSE INCDIR(.\ADC;.\I2C;.\LCD;.\System;.\UART1;.
+                    -\Menu;.\KEY;..\实战-电流计_V2.0;.\Timer;.\SPI_Handler;.\CH224K;.\Pwm) DEBUG PRINT(.\Listings\CH224K.lst) TABS(2) OBJECT(
+                    -.\Objects\CH224K.obj) 
+
+stmt  level    source
+
+    1          /*
+    2          *注意：使用keil需要设置为GB2312
+    3          *==============================CH224KPD，QC诱骗源文件=======================
+    4          *-------------------------------------------------------------------
+    5          *文件修改历史
+    6          *<时间>    | <版本>  | <作者>  | <功能>  
+    7          *2023.2.24 | V1.0.2   | 小夏    | CH224KPD，QC诱骗
+    8          *-------------------------------------------------------------------
+    9          */
+   10          
+   11          #include "CH224K.h"
+   12          #include "menu_Ui.h"
+   13          #include "ADC.h"
+   14          u8 PD_Power_FLAG;
+   15          PD_Voltage_Get PD_Get;
+   16          /*-------------------------------------------------------------
+   17          *功能：CH224K的PD和QC不同电压诱骗
+   18          *作者：小夏
+   19          *修改时间：2023.2.24
+   20          *参考：大脑（自己）
+   21          *-------------------------------------------------------------*/
+   22          void CH224K_PD_Voltage(u8 V_FLag){
+   23   1        
+   24   1        if(V_FLag ==OUTPUT_5V){
+   25   2          CFG1=1;
+   26   2          CFG2=0;
+   27   2          CFG3=0;   
+   28   2        }else if(V_FLag ==OUTPUT_9V){
+   29   2          CFG1=0;
+   30   2          CFG2=0;
+   31   2          CFG3=0;     
+   32   2        }else if(V_FLag ==OUTPUT_12V){
+   33   2          CFG1=0;
+   34   2          CFG2=0;
+   35   2          CFG3=1;     
+   36   2        }else if(V_FLag ==OUTPUT_15V){
+   37   2          CFG1=0;
+   38   2          CFG2=1;
+   39   2          CFG3=1;     
+   40   2        }else if(V_FLag ==OUTPUT_20V){
+   41   2          CFG1=0;
+   42   2          CFG2=1;
+   43   2          CFG3=0;     
+   44   2        }
+   45   1        
+   46   1      }
+   47          /*-------------------------------------------------------------
+   48          *功能：CH224K的PD和QC不同电压检测
+   49          *作者：小夏
+   50          *修改时间：2023.2.24
+   51          *参考：大脑（自己）
+   52          *-------------------------------------------------------------*/
+   53          void PD_Bgegin(void){
+   54   1        //检测9V
+   55   1        CH224K_PD_Voltage(OUTPUT_9V);
+   56   1        ADC_Get.Voltage_Value=ADC_Voltage_Read_Value_average();
+   57   1        if(ADC_Get.Voltage_Value>6.8) PD_Get.PD_9V_Flag=1;
+C251 COMPILER V5.60.0,  CH224K                                                             24/02/23  15:43:51  PAGE 2   
+
+   58   1        else PD_Get.PD_9V_Flag=0;
+   59   1        //检测12V
+   60   1        CH224K_PD_Voltage(OUTPUT_12V);
+   61   1        ADC_Get.Voltage_Value=ADC_Voltage_Read_Value_average();
+   62   1        if(ADC_Get.Voltage_Value>10.8) PD_Get.PD_12V_Flag=1;
+   63   1        else PD_Get.PD_12V_Flag=0;  
+   64   1        //检测12V
+   65   1        CH224K_PD_Voltage(OUTPUT_15V);
+   66   1        ADC_Get.Voltage_Value=ADC_Voltage_Read_Value_average();
+   67   1        if(ADC_Get.Voltage_Value>12.8) PD_Get.PD_15V_Flag=1;
+   68   1        else PD_Get.PD_15V_Flag=0;  
+   69   1        //检测12V
+   70   1        CH224K_PD_Voltage(OUTPUT_20V);
+   71   1        ADC_Get.Voltage_Value=ADC_Voltage_Read_Value_average();
+   72   1        if(ADC_Get.Voltage_Value>16.8) PD_Get.PD_20V_Flag=1;
+   73   1        else PD_Get.PD_20V_Flag=0;
+   74   1      }
+   75          /*-------------------------------------------------------------
+   76          *功能：CH224K的PD和QC不同电压诱骗输出
+   77          *作者：小夏
+   78          *修改时间：2023.2.24
+   79          *参考：大脑（自己）
+   80          *-------------------------------------------------------------*/
+   81          void PD_Power_Output(void){
+   82   1        if(PD_Get.PD_9V_Flag==0&&PD_Get.PD_12V_Flag==0&&PD_Get.PD_15V_Flag==0&&PD_Get.PD_20V_Flag==0){    
+   83   2          PD_Power_FLAG =0;   //PD0V
+   84   2        }
+   85   1        if(PD_Get.PD_9V_Flag==1&&PD_Get.PD_12V_Flag==1&&PD_Get.PD_15V_Flag==0&&PD_Get.PD_20V_Flag==0){    
+   86   2          PD_Power_FLAG =1; //PD22W   
+   87   2        } 
+   88   1        if(PD_Get.PD_9V_Flag==1&&PD_Get.PD_12V_Flag==0&&PD_Get.PD_15V_Flag==1&&PD_Get.PD_20V_Flag==1){    
+   89   2          PD_Power_FLAG =2; //PD49.5W   
+   90   2        } 
+   91   1        if(PD_Get.PD_9V_Flag==1&&PD_Get.PD_12V_Flag==1&&PD_Get.PD_15V_Flag==1&&PD_Get.PD_20V_Flag==1){    
+   92   2          PD_Power_FLAG =3; //PD66W   
+   93   2        } 
+   94   1      }
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       316     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =         5     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =    ------     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

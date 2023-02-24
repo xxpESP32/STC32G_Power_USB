@@ -1,0 +1,200 @@
+C251 COMPILER V5.60.0,  Timer                                                              24/02/23  15:43:51  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE Timer
+OBJECT MODULE PLACED IN .\Objects\Timer.obj
+COMPILER INVOKED BY: D:\keil\C251\BIN\C251.EXE Timer\Timer.c XSMALL BROWSE INCDIR(.\ADC;.\I2C;.\LCD;.\System;.\UART1;.\M
+                    -enu;.\KEY;..\实战-电流计_V2.0;.\Timer;.\SPI_Handler;.\CH224K;.\Pwm) DEBUG PRINT(.\Listings\Timer.lst) TABS(2) OBJECT(.\O
+                    -bjects\Timer.obj) 
+
+stmt  level    source
+
+    1          /*
+    2          *注意：使用keil需要设置为GB2312
+    3          *==============================Timer定时器源文件=======================
+    4          *-------------------------------------------------------------------
+    5          *文件修改历史
+    6          *<时间>    | <版本>  | <作者>  | <功能>  
+    7          *2023.2.24 | V1.0.2   | 小夏    | Timer定时器配置
+    8          *-------------------------------------------------------------------
+    9          *如需要教学请到CSDN上面搜索"单片有机机"的STC32G专栏
+   10          */
+   11          
+   12          #include "Timer.h"
+   13          #include "ADC.h"
+   14          #include "I2C.h"
+   15          #include "AHT10.h"
+   16          #include "menu_Ui.h"
+   17          #include "KEY.h"
+   18          u16 time;
+   19          u16 T1_time;
+   20          u16 Change_Time =60000;
+   21          u16 X_Voltage_Line=11;
+   22          u16 Y_Voltage_Line=114;
+   23          
+   24          u16 X_Current_Line=10;
+   25          u16 Y_Current_Line=117;
+   26          u8 X_Line_Loop_FLAG;
+   27          u8 Dispaly_Ch_Flag;
+   28          u16 Timer2_flag;
+   29          unsigned long time_nember;
+   30          Time_Display T_D;
+   31          float umA_Num;
+   32          float umA_Num_Sum;
+   33          float uW_Num;
+   34          float uW_Num_Sum;
+   35          /*-------------------------------------------------------------
+   36          *功能：Timer0中断服务函数配置（电压电流曲线时间设置）
+   37          *作者：小夏
+   38          *修改时间：2023.2.24
+   39          *参考：<STC32G数据手册>
+   40          *-------------------------------------------------------------*/
+   41          void TM0_Isr() interrupt 1
+   42          { 
+   43   1        
+   44   1        time++;
+   45   1        if(time>=Change_Time){ //22ms
+   46   2      
+   47   2          if(FLAGS==1){
+   48   3            X_Line_Loop_FLAG=1;
+   49   3          }
+   50   2          time=0;
+   51   2        }
+   52   1      
+   53   1        
+   54   1      }
+   55          /*-------------------------------------------------------------
+   56          *功能：Timer0初始化配置
+   57          *作者：小夏
+C251 COMPILER V5.60.0,  Timer                                                              24/02/23  15:43:51  PAGE 2   
+
+   58          *修改时间：2023.2.24
+   59          *参考：<STC32G数据手册>
+   60          *-------------------------------------------------------------*/
+   61          void Timer0_Init(void){
+   62   1        
+   63   1        TMOD=0x00; //16位自动重装载值
+   64   1        TL0=62623;  //定时20ms
+   65   1        TH0=62623>>8;  
+   66   1        TR0=1;  //开启timer0定时器
+   67   1        ET0=1;  //开启timer0中断
+   68   1        EA=1;   //开启总中断
+   69   1        
+   70   1      }
+   71          /*-------------------------------------------------------------
+   72          *功能：Timer1中断服务函数配置（检测AH，WH，时间功耗）
+   73          *作者：小夏
+   74          *修改时间：2023.2.24
+   75          *参考：<STC32G数据手册>
+   76          *-------------------------------------------------------------*/
+   77          void TM1_Isr() interrupt 3
+   78          {
+   79   1          Timer2_flag++;
+   80   1        if(Timer2_flag>=1000 && ADC_Get.Current_Value>=0.006){
+   81   2          time_nember++;
+   82   2          T_D.S=time_nember;
+   83   2          //T_D.M=time_nember/60; 
+   84   2          //T_D.H=time_nember/3600;
+   85   2          if(T_D.S>=60){
+   86   3            T_D.M++;
+   87   3            time_nember=0;
+   88   3          }
+   89   2          if(T_D.M>=60){
+   90   3            T_D.H++;
+   91   3            T_D.M=0;
+   92   3          }
+   93   2          umA_Num=(ADC_Get.Current_Value/3600);
+   94   2          umA_Num_Sum+=umA_Num;
+   95   2          uW_Num=umA_Num*ADC_Get.Voltage_Value;
+   96   2          uW_Num_Sum+=uW_Num;
+   97   2          Timer2_flag=0;  
+   98   2        }
+   99   1        
+  100   1        
+  101   1      }
+  102          /*-------------------------------------------------------------
+  103          *功能：Timer1初始化配置
+  104          *作者：小夏
+  105          *修改时间：2023.2.24
+  106          *参考：<STC32G数据手册>
+  107          *-------------------------------------------------------------*/
+  108          void Timer1_Init(void){
+  109   1        
+  110   1        TMOD=0x00; //16位自动重装载值
+  111   1        TL1=62623;  //定时1ms
+  112   1        TH1=62623>>8;  
+  113   1        TR1=1;  //开启timer0定时器
+  114   1        ET1=1;  //开启timer0中断
+  115   1        EA=1;   //开启总中断  
+  116   1        
+  117   1        
+  118   1      }
+  119          /*-------------------------------------------------------------
+  120          *功能：Timer2中断服务函数配置（检测过流过温）
+  121          *作者：小夏
+  122          *修改时间：2023.2.24
+  123          *参考：<STC32G数据手册>
+C251 COMPILER V5.60.0,  Timer                                                              24/02/23  15:43:51  PAGE 3   
+
+  124          *-------------------------------------------------------------*/
+  125          void TM2_Isr() interrupt 12
+  126          {
+  127   1      
+  128   1        
+  129   1          T1_time++;
+  130   1        if(T1_time>=1){
+  131   2          if(C_T_P.protect_Current<=ADC_Get.Current_Value){//过流保护
+  132   3            Dispaly_Ch_Flag=1;
+  133   3            P16=0;
+  134   3          }else if(C_T_P.protect_Temp<=ALL_temp){//过温保护
+  135   3            Dispaly_Ch_Flag=2;
+  136   3            P16=0;
+  137   3            
+  138   3          }
+  139   2          if(KEY_BACK_Read==0){
+  140   3                P16=1;
+  141   3                Dispaly_Ch_Flag=0;      
+  142   3            }
+  143   2          T1_time=0;
+  144   2                  
+  145   2        }
+  146   1      }
+  147          /*-------------------------------------------------------------
+  148          *功能：Timer2初始化配置
+  149          *作者：小夏
+  150          *修改时间：2023.2.24
+  151          *参考：<STC32G数据手册>
+  152          *-------------------------------------------------------------*/
+  153          void Timer2_Init(void){
+  154   1        //TMOD=0x00; //16位自动重装载值 
+  155   1        T2L=62623;  //定时20ms
+  156   1        T2H=62623>>8;  
+  157   1        T2R=1;  //开启timer0定时器
+  158   1        ET2=1;  //开启timer0中断
+  159   1        EA=1;   //开启总中断    
+  160   1        
+  161   1      }
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       377     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =        44     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =        30     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

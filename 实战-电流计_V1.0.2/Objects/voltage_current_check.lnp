@@ -1,0 +1,20 @@
+".\Objects\main.obj",
+".\Objects\ADC.obj",
+".\Objects\AHT10.obj",
+".\Objects\I2C.obj",
+".\Objects\lcd.obj",
+".\Objects\lcd_init.obj",
+".\Objects\uart1.obj",
+".\Objects\usart2.obj",
+".\Objects\SYSTEM.obj",
+".\Objects\menu.obj",
+".\Objects\menu_Ui.obj",
+".\Objects\KEY.obj",
+".\Objects\Timer.obj",
+".\Objects\Spi_Handler.obj",
+".\Objects\CH224K.obj",
+".\Objects\Pwm.obj" 
+TO ".\Objects\voltage_current_check" 
+PRINT(".\Listings\voltage_current_check.map") CASE 
+CLASSES (EDATA (0x0-0xFFF), 
+HDATA (0x0-0xFFF)) 

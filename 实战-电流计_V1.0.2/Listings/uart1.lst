@@ -1,0 +1,90 @@
+C251 COMPILER V5.60.0,  uart1                                                              13/02/23  16:20:12  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE uart1
+OBJECT MODULE PLACED IN .\Objects\uart1.obj
+COMPILER INVOKED BY: D:\keil\C251\BIN\C251.EXE UART1\uart1.c XSMALL BROWSE INCDIR(.\ADC;.\I2C;.\LCD;.\System;.\UART1;.\M
+                    -enu;.\KEY;..\实战-电流计_V2.0;.\Timer;.\SPI_Handler;.\CH224K;.\Pwm) DEBUG PRINT(.\Listings\uart1.lst) TABS(2) OBJECT(.\O
+                    -bjects\uart1.obj) 
+
+stmt  level    source
+
+    1          #include "uart1.h"
+    2          char buff[64];
+    3          char rx_len;
+    4          void Uart1_Init(void){
+    5   1        S1_S1=0;
+    6   1        S1_S0=0; //使用P3.0，P3.1
+    7   1        SCON=0x40;
+    8   1        REN=1;
+    9   1        S1BRT =1;
+   10   1        T2L  = TM;
+   11   1        T2H  = TM>>8;
+   12   1        AUXR |= 0x14; //定时器2时钟1T模式,开始计时
+   13   1        rx_len=0;
+   14   1        
+   15   1        ES=1;
+   16   1        EA=1;
+   17   1        
+   18   1      }
+   19          void Usart1_Send(unsigned char dat)
+   20          {
+   21   1        SBUF=dat;
+   22   1        while(TI==0);
+   23   1        TI=0;
+   24   1      }
+   25          char putchar(char c)
+   26          {
+   27   1        Usart1_Send(c);
+   28   1        return c;
+   29   1      }
+   30          
+   31          void Usart1_Send_Str(char* dat)
+   32          {
+   33   1        while(*dat){
+   34   2        Usart1_Send(*dat++);
+   35   2        }
+   36   1      }
+   37          
+   38          void USART_BackCall_IRQ(void) interrupt 4
+   39          {
+   40   1        
+   41   1          if(RI){
+   42   2            RI=0;
+   43   2            if(SBUF=='\n'){
+   44   3              buff[rx_len++]='\0';
+   45   3              rx_len =0;
+   46   3            }else{
+   47   3              buff[rx_len++]=SBUF;
+   48   3              P20=!P20;
+   49   3            }
+   50   2            
+   51   2          }
+   52   1        
+   53   1      } 
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       147     ------
+C251 COMPILER V5.60.0,  uart1                                                              13/02/23  16:20:12  PAGE 2   
+
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =        65     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =    ------     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

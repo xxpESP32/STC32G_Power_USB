@@ -1,0 +1,85 @@
+C251 COMPILER V5.60.0,  SYSTEM                                                             24/02/23  15:24:58  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE SYSTEM
+OBJECT MODULE PLACED IN .\Objects\SYSTEM.obj
+COMPILER INVOKED BY: D:\keil\C251\BIN\C251.EXE System\SYSTEM.c XSMALL BROWSE INCDIR(.\ADC;.\I2C;.\LCD;.\System;.\UART1;.
+                    -\Menu;.\KEY;..\实战-电流计_V2.0;.\Timer;.\SPI_Handler;.\CH224K;.\Pwm) DEBUG PRINT(.\Listings\SYSTEM.lst) TABS(2) OBJECT(
+                    -.\Objects\SYSTEM.obj) 
+
+stmt  level    source
+
+    1          #include "system.h"
+    2          /*
+    3          *注意：使用keil需要设置为GB2312
+    4          *==============================系统初始化源文件=======================
+    5          *-------------------------------------------------------------------
+    6          *文件修改历史
+    7          *<时间>    | <版本>  | <作者>  | <功能>  
+    8          *2023.2.24 | V1.0.2   | 小夏    | 系统初始化、delay_ms延时
+    9          *-------------------------------------------------------------------
+   10          *如需要教学请到CSDN上面搜索"单片有机机"的STC32G专栏
+   11          */
+   12          
+   13          /*-------------------------------------------------------------
+   14          *功能：STC32G引脚初始化及其其他配置
+   15          *作者：小夏
+   16          *修改时间：2023.2.24
+   17          *参考：<STC32G技术手册>
+   18          *-------------------------------------------------------------*/
+   19          void GPIO_Init(void){
+   20   1        
+   21   1        
+   22   1        WTST = 0x00;  //设置程序指令延时参数，赋值为0可将CPU执行指令的速度设置为最快
+   23   1        EAXFR = 1; //扩展寄存器(XFR)访问使能
+   24   1        CKCON = 0x00; //提高访问XRAM速度
+   25   1        
+   26   1        P0M1 = 0x00;   P0M0 = 0x00;   //设置为高阻输入
+   27   1        P1M1 = 0x00;   P1M0 = 0x00;   //设置为高阻输入
+   28   1        P2M1 = 0x00;   P2M0 = 0x00;   //设置为准双向口
+   29   1        P3M1 = 0x00;   P3M0 = 0x00;   //设置为准双向口
+   30   1        P4M1 = 0x00;   P4M0 = 0x00;   //设置为准双向口
+   31   1        P5M1 = 0x00;   P5M0 = 0x00;   //设置P5.4为高阻输入
+   32   1        P6M1 = 0x00;   P6M0 = 0x00;   //设置为准双向口
+   33   1        P7M1 = 0x00;   P7M0 = 0x00;   //设置为准双向口
+   34   1          
+   35   1      }
+   36          /*-------------------------------------------------------------
+   37          *功能：delay_ms延时配置
+   38          *作者：小夏
+   39          *修改时间：2023.2.24
+   40          *参考：<STC32G技术手册>
+   41          *-------------------------------------------------------------*/
+   42          void Delay_ms(u32 x){ //误差+-0.12ms 够用
+   43   1        unsigned int i;
+   44   1        do{
+   45   2          i = Sysclk / 6010; //3980.09950 -5556  -
+   46   2          while(--i);
+   47   2        }while(--x);    
+   48   1      }
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =        83     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+C251 COMPILER V5.60.0,  SYSTEM                                                             24/02/23  15:24:58  PAGE 2   
+
+  xdata-const size     =    ------     ------
+  edata size           =    ------     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =    ------     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

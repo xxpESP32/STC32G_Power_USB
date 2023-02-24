@@ -1,0 +1,48 @@
+C251 COMPILER V5.60.0,  Spi_Handler                                                        13/02/23  16:20:13  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE Spi_Handler
+OBJECT MODULE PLACED IN .\Objects\Spi_Handler.obj
+COMPILER INVOKED BY: D:\keil\C251\BIN\C251.EXE SPI_Handler\Spi_Handler.c XSMALL BROWSE INCDIR(.\ADC;.\I2C;.\LCD;.\System
+                    -;.\UART1;.\Menu;.\KEY;..\实战-电流计_V2.0;.\Timer;.\SPI_Handler;.\CH224K;.\Pwm) DEBUG PRINT(.\Listings\Spi_Handler.lst) 
+                    -TABS(2) OBJECT(.\Objects\Spi_Handler.obj) 
+
+stmt  level    source
+
+    1          #include "Spi_Handler.h"
+    2          
+    3          void SPI_Init(void){
+    4   1        //CS=1;
+    5   1        P10=1;
+    6   1      //  SPI_S1 = 0;
+    7   1      //  SPI_S0 = 0;
+    8   1        P_SW1=0x00;
+    9   1        SPDAT=0;
+   10   1        SPCTL =0x50;
+   11   1        SPSTAT=0xc0;
+   12   1        
+   13   1      }
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =        15     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =    ------     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =    ------     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

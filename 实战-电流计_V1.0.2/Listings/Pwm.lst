@@ -1,0 +1,158 @@
+C251 COMPILER V5.60.0,  Pwm                                                                22/02/23  20:33:58  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE Pwm
+OBJECT MODULE PLACED IN .\Objects\Pwm.obj
+COMPILER INVOKED BY: D:\keil\C251\BIN\C251.EXE Pwm\Pwm.c XSMALL BROWSE INCDIR(.\ADC;.\I2C;.\LCD;.\System;.\UART1;.\Menu;
+                    -.\KEY;..\实战-电流计_V2.0;.\Timer;.\SPI_Handler;.\CH224K;.\Pwm) DEBUG PRINT(.\Listings\Pwm.lst) TABS(2) OBJECT(.\Objects
+                    -\Pwm.obj) 
+
+stmt  level    source
+
+    1          #include "Pwm.h"
+    2          void Pwm_Init_D_L(void){
+    3   1          PWMB_PS=0x08; //08 PWM6_3通道 0A PWM6_3通道& PWM5_3通道
+    4   1        //PWMB_PS=0x08;
+    5   1        
+    6   1        PWMB_CCER1=0x00;
+    7   1        
+    8   1        PWMB_CCMR2=0x60; //PWM6
+    9   1        //PWMB_CCMR1=0x60; //PWM5
+   10   1        
+   11   1        PWMB_CCER1=0x10;//PWM6
+   12   1        //PWMB_CCER1=0x01;//PWM5
+   13   1        //PWM6 D+
+   14   1        PWMB_CCR6H=0x30;
+   15   1        PWMB_CCR6L=0x0F;  
+   16   1        //PWM5 D-
+   17   1        //PWMB_CCR5H=0x30;
+   18   1        //PWMB_CCR5L=0xFF;  
+   19   1        
+   20   1        
+   21   1        PWMB_ARRH=0xFF;
+   22   1        PWMB_ARRL=0x00;
+   23   1        //PWM6
+   24   1        PWMB_ENO=0x04;
+   25   1        //PWM5
+   26   1        //PWMB_ENO=0x01;
+   27   1        
+   28   1        PWMB_BKR=0x80;
+   29   1        PWMB_CR1=0x01;
+   30   1      }
+   31          void Pwm_Init_D_H(void){
+   32   1          PWMB_PS=0x02; //08 PWM6_3通道 0A PWM6_3通道& PWM5_3通道
+   33   1        //PWMB_PS=0x08;
+   34   1        
+   35   1        PWMB_CCER1=0x00;
+   36   1        
+   37   1        //PWMB_CCMR2=0x60; //PWM6
+   38   1        PWMB_CCMR1=0x60; //PWM5
+   39   1        
+   40   1        //PWMB_CCER1=0x10;//PWM6
+   41   1        PWMB_CCER1=0x01;//PWM5
+   42   1        //PWM6 D+
+   43   1        PWMB_CCR5H=0x30;
+   44   1        PWMB_CCR5L=0xFF;  
+   45   1        //PWM5 D-
+   46   1        //PWMB_CCR5H=0x30;
+   47   1        //PWMB_CCR5L=0xFF;  
+   48   1        
+   49   1        
+   50   1        PWMB_ARRH=0xFF;
+   51   1        PWMB_ARRL=0x00;
+   52   1        //PWM5
+   53   1        PWMB_ENO=0x01;
+   54   1        //PWM5
+   55   1        //PWMB_ENO=0x01;
+   56   1        
+   57   1        PWMB_BKR=0x80;
+C251 COMPILER V5.60.0,  Pwm                                                                22/02/23  20:33:58  PAGE 2   
+
+   58   1        PWMB_CR1=0x01;
+   59   1      }
+   60          void Pwm_Init(void){
+   61   1        PWMB_PS=0x0A; //08 PWM6_3通道 0A PWM6_3通道& PWM5_3通道
+   62   1        //PWMB_PS=0x08;
+   63   1        
+   64   1        PWMB_CCER1=0x00;
+   65   1        
+   66   1        PWMB_CCMR2=0x00; //PWM6
+   67   1        PWMB_CCMR1=0x00; //PWM5
+   68   1        
+   69   1        PWMB_CCER1=0x00;//PWM6
+   70   1        //PWMB_CCER1=0x01;//PWM5
+   71   1        //PWM6 D+
+   72   1        PWMB_CCR6H=0x00;
+   73   1        PWMB_CCR6L=0x00;  
+   74   1        //PWM5 D-
+   75   1        //PWMB_CCR5H=0x30;
+   76   1        //PWMB_CCR5L=0xFF;  
+   77   1        PWMB_CCR5H=0x00;
+   78   1        PWMB_CCR5L=0x00;    
+   79   1        
+   80   1        PWMB_ARRH=0x00;
+   81   1        PWMB_ARRL=0x00;
+   82   1        //PWM6
+   83   1        PWMB_ENO=0x00;
+   84   1        //PWM5
+   85   1        //PWMB_ENO=0x01;
+   86   1        
+   87   1        PWMB_BKR=0x00;
+   88   1        PWMB_CR1=0x00;
+   89   1      }
+   90          void Pwm_Init_2(void){
+   91   1        PWMB_PS=0x0A; //08 PWM6_3通道 0A PWM6_3通道& PWM5_3通道
+   92   1        //PWMB_PS=0x08;
+   93   1        
+   94   1        PWMB_CCER1=0x00;
+   95   1        
+   96   1        PWMB_CCMR2=0x60; //PWM6
+   97   1        PWMB_CCMR1=0x60; //PWM5
+   98   1        
+   99   1        PWMB_CCER1=0x11;//PWM6
+  100   1        //PWMB_CCER1=0x01;//PWM5
+  101   1        //PWM6 D+
+  102   1        PWMB_CCR6H=0xFF;
+  103   1        PWMB_CCR6L=0x00;  
+  104   1        //PWM5 D-
+  105   1        PWMB_CCR5H=0x30;
+  106   1        PWMB_CCR5L=0x00;  
+  107   1        //PWMB_CCR5H=0x00;
+  108   1        //PWMB_CCR5L=0x00;    
+  109   1        
+  110   1        PWMB_ARRH=0xFF;
+  111   1        PWMB_ARRL=0x00;
+  112   1        //PWM6
+  113   1        PWMB_ENO=0x05;
+  114   1        //PWM5
+  115   1        //PWMB_ENO=0x01;
+  116   1        
+  117   1        PWMB_BKR=0x80;
+  118   1        PWMB_CR1=0x01;
+  119   1      }
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       433     ------
+C251 COMPILER V5.60.0,  Pwm                                                                22/02/23  20:33:58  PAGE 3   
+
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =    ------     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =    ------     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

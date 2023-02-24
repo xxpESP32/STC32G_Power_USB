@@ -1,0 +1,189 @@
+C251 COMPILER V5.60.0,  AHT10                                                              24/02/23  15:22:34  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE AHT10
+OBJECT MODULE PLACED IN .\Objects\AHT10.obj
+COMPILER INVOKED BY: D:\keil\C251\BIN\C251.EXE I2C\AHT10.c XSMALL BROWSE INCDIR(.\ADC;.\I2C;.\LCD;.\System;.\UART1;.\Men
+                    -u;.\KEY;..\ʵս-������_V2.0;.\Timer;.\SPI_Handler;.\CH224K;.\Pwm) DEBUG PRINT(.\Listings\AHT10.lst) TABS(2) OBJECT(.\Obj
+                    -ects\AHT10.obj) 
+
+stmt  level    source
+
+    1          /*
+    2          *注意：使用keil需要设置为GB2312
+    3          *==============================AHT10温湿度传感器源文件=======================
+    4          *-------------------------------------------------------------------
+    5          *文件修改历史
+    6          *<时间>    | <版本>  | <作者>  | <功能>  
+    7          *2023.2.24 | V1.0.2   | 小夏    | AHT10温湿度传感器配置
+    8          *-------------------------------------------------------------------
+    9          *如需要教学请到CSDN上面搜索"单片有机机"的STC32G专栏
+   10          */
+   11          
+   12          #include "AHT10.h"
+   13          
+   14          
+   15          #define AHT_ADDRESS 0X70 //0X38从机地址
+   16          #define AHT_WRITE   0X70  //0X38写地址
+   17          #define AHT_READ    0X71 //0X39读地址
+   18          
+   19          u8 ACK,DATA[6];
+   20          u8 IN=0;
+   21          /*-------------------------------------------------------------
+   22          *功能：AHT10初始化配置
+   23          *作者：小夏
+   24          *修改时间：2023.2.24
+   25          *参考：<AHT10技术手册>
+   26          *-------------------------------------------------------------*/
+   27          u8 AHT10_State(void){        //����0 ������ 1
+   28   1        
+   29   1        u8 ACK;
+   30   1        I2C_Init(I2C_GPIO_2);
+   31   1        //I2C_Start();
+   32   1        //I2C_Write_Byte(AHT_WRITE);
+   33   1        //ACK = I2C_Write_Ack();
+   34   1        //I2C_Stop();
+   35   1        
+   36   1        return ACK;
+   37   1      }
+   38          /*-------------------------------------------------------------
+   39          *功能：AHT10写配置
+   40          *作者：小夏
+   41          *修改时间：2023.2.24
+   42          *参考：<AHT10技术手册>
+   43          *-------------------------------------------------------------*/
+   44          void AHT10_Write_Init(void){ // bit3 0 1
+   45   1        
+   46   1        I2C_Start();
+   47   1        I2C_Send_Byte(AHT_WRITE);
+   48   1        I2C_Wait_ACK();
+   49   1        I2C_Send_Byte(0XE1);
+   50   1        I2C_Wait_ACK();
+   51   1        I2C_Send_Byte(0X08);
+   52   1        I2C_Wait_ACK();
+   53   1        I2C_Send_Byte(0X00);
+   54   1        I2C_Wait_ACK();
+   55   1        I2C_Stop();
+   56   1        Delay_ms(40);
+   57   1      }
+C251 COMPILER V5.60.0,  AHT10                                                              24/02/23  15:22:34  PAGE 2   
+
+   58          /*-------------------------------------------------------------
+   59          *功能：AHT10读配置
+   60          *作者：小夏
+   61          *修改时间：2023.2.24
+   62          *参考：<AHT10技术手册>
+   63          *-------------------------------------------------------------*/
+   64          void AHT10_Write_Reset(void){
+   65   1        
+   66   1        I2C_Start();
+   67   1        I2C_Send_Byte(AHT_WRITE);
+   68   1          I2C_Wait_ACK();
+   69   1        I2C_Send_Byte(0XBA);
+   70   1          I2C_Wait_ACK();
+   71   1        I2C_Stop();
+   72   1        Delay_ms(40);
+   73   1      }
+   74          /*-------------------------------------------------------------
+   75          *功能：AHT10读取温湿度配置
+   76          *作者：小夏
+   77          *修改时间：2023.2.24
+   78          *参考：<AHT10技术手册>
+   79          *-------------------------------------------------------------*/
+   80          u8 AHT10_Read_Humi_Temp( unsigned int *HUMI,  unsigned int *TEMP){ // 0�������� 1 ���
+             -��ݴ���
+   81   1        u32 humi = 0;
+   82   1        u32 temp = 0;
+   83   1        unsigned long return_value;
+   84   1        
+   85   1        I2C_Start();
+   86   1        I2C_Send_Byte(AHT_WRITE);
+   87   1        I2C_Wait_ACK();
+   88   1        I2C_Send_Byte(0XAC);
+   89   1        I2C_Wait_ACK();
+   90   1        I2C_Send_Byte(0X33);
+   91   1        I2C_Wait_ACK();
+   92   1        I2C_Send_Byte(0X00);
+   93   1        I2C_Wait_ACK();
+   94   1        I2C_Stop();
+   95   1        Delay_ms(80);
+   96   1        
+   97   1        I2C_Start();
+   98   1        I2C_Send_Byte(AHT_READ);
+   99   1        I2C_Wait_ACK();
+  100   1        ACK = I2C_Read_Byte();
+  101   1        I2C_ACK();
+  102   1        //I2C_Sende_Ack(0);     //0000 1000 BIT3 0
+  103   1        //I2C_ACK();
+  104   1        //I2C_Delay();
+  105   1      
+  106   1        if((ACK&0X08) == 0){
+  107   2          
+  108   2          AHT10_Write_Init();
+  109   2        }
+  110   1        if((ACK&0X80) == 0){  //bit7 1 0
+  111   2          
+  112   2          for(IN=0;IN<5;IN++){ // 0 1 2 3 4 5 ++i
+  113   3            
+  114   3            DATA[IN] = I2C_Read_Byte();
+  115   3            
+  116   3            if(IN == 4)
+  117   3              
+  118   3              I2C_NACK();
+  119   3            else
+  120   3              I2C_ACK();
+  121   3          }
+  122   2          I2C_Stop();
+C251 COMPILER V5.60.0,  AHT10                                                              24/02/23  15:22:34  PAGE 3   
+
+  123   2          //humi =humi+DATA[0];
+  124   2          //humi=(humi<<8)+DATA[1];
+  125   2          //humi=((humi<<8)+DATA[2])>>4;
+  126   2        /*  humi = (DATA[0]<<12)|(DATA[1]<<4)|(DATA[2]>>4);
+  127   2          temp = ((DATA[2]&0X0F)<<16)|(DATA[3]<<8)|(DATA[4]);
+  128   2          printf("HUMI_data=%d\nsize=%d\n",humi,1);
+  129   2          printf("TEMP_data=%d\n",temp);
+  130   2          
+  131   2          *HUMI = (humi * 1000/1024/1024);
+  132   2          *TEMP = (temp * 2000/1024/1024+0.5)/10-50;
+  133   2        */
+  134   2          return_value =0;
+  135   2          return_value=(DATA[0]<<8)|DATA[1];
+  136   2          return_value=((return_value<<8)|DATA[2])>>4;
+  137   2          return_value=return_value & 0x000fffff;
+  138   2          *HUMI =(return_value*1000/1024/1024);
+  139   2          
+  140   2          return_value =0;
+  141   2          return_value =((DATA[2]% 16)<<8)|DATA[3];
+  142   2          return_value =(return_value<<8)|DATA[4];
+  143   2          return_value =return_value &0x000fffff;
+  144   2          *TEMP =(return_value*200*10/1024/1024-500);
+  145   2          return 0;
+  146   2        }
+  147   1        
+  148   1        return 1;
+  149   1      }
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       410     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =         8          5
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =         5     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
