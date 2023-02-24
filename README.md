@@ -1,0 +1,2 @@
+# STC32G_Power_USB
+这是基于STC32G12K128的一个功率计
